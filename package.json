@@ -1,0 +1,32 @@
+{
+  "name": "figma-intelligence",
+  "version": "1.0.0",
+  "description": "One-command installer for Figma Intelligence — AI-powered design tools for Figma",
+  "bin": {
+    "figma-intelligence": "bin/cli.js"
+  },
+  "scripts": {
+    "postinstall": "node lib/download-binary.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "plugin/"
+  ],
+  "keywords": [
+    "figma",
+    "mcp",
+    "ai",
+    "design",
+    "intelligence"
+  ],
+  "author": "Figma Intelligence Contributors",
+  "license": "CC-BY-NC-ND-4.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sarjal-lab/figma-intelligence-installer.git"
+  }
+}
