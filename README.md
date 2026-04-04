@@ -1,6 +1,6 @@
 # Figma Intelligence
 
-AI-powered design tools for Figma. 29+ MCP tools that give your AI assistant (Claude, Cursor, VS Code) the ability to read, create, audit, and modify Figma designs.
+AI-powered design tools for Figma. 88 MCP tools that give your AI assistant (Claude, Cursor, VS Code) the ability to read, create, audit, and modify Figma designs.
 
 ---
 
@@ -56,9 +56,9 @@ Your AI assistant now has direct access to your Figma file.
 
 ---
 
-## All 29+ Tools
+## All 88 Tools
 
-### Phase 1: Visual Intelligence
+### Phase 1: Visual Intelligence (7 tools)
 | Tool | What It Does |
 |------|-------------|
 | `figma_screen_cloner` | Reconstruct any screenshot as a Figma frame using your design system |
@@ -69,7 +69,7 @@ Your AI assistant now has direct access to your Figma file.
 | `figma_sketch_to_design` | Hand-drawn wireframe to production-quality frame |
 | `figma_design_from_ref` | Reference image to design using your design system |
 
-### Phase 2: Design System Accuracy
+### Phase 2: Design System Accuracy (6 tools)
 | Tool | What It Does |
 |------|-------------|
 | `figma_intent_translator` | Natural language to design system mapping |
@@ -79,7 +79,7 @@ Your AI assistant now has direct access to your Figma file.
 | `figma_lint_rules` | Design system linting |
 | `figma_component_audit` | Component consistency checking |
 
-### Phase 3: Generation and Scaffolding
+### Phase 3: Generation and Scaffolding (12 tools)
 | Tool | What It Does |
 |------|-------------|
 | `figma_component_archaeologist` | Find and reuse existing components |
@@ -89,24 +89,86 @@ Your AI assistant now has direct access to your Figma file.
 | `figma_url_to_frame` | Screenshot any URL into a Figma frame |
 | `figma_system_drift` | Detect design system deviations |
 | `figma_prototype_map` | Visualize prototype flow |
+| `figma_prototype_scan` | Scan prototype connections |
+| `figma_prototype_wire` | Wire prototype flows |
+| `figma_animated_build` | Animation spec generation |
 | `figma_composition_builder` | Build complex UI compositions |
 | `figma_swarm_build` | Multi-agent parallel building |
 
-### Phase 4: Sync and Code
+### Phase 4: Sync and Code (9 tools)
 | Tool | What It Does |
 |------|-------------|
+| `figma_animation_specifier` | Animation documentation |
 | `figma_sync_from_code` | Sync code changes back to design |
 | `figma_export_tokens` | Export design tokens (JSON, CSS, SCSS) |
 | `figma_generate_component_code` | Generate React/Vue/Svelte code from components |
+| `figma_webhook_listener` | Webhook handling |
 | `figma_handoff_spec` | Developer handoff documentation |
+| `figma_ci_check` | CI design integration checks |
+| `figma_watch_docs` | Documentation auto-sync |
+| `figma_icon_library_sync` | Icon library synchronization |
 
-### Phase 5: Governance and Health
+### Phase 5: Governance and Health (18 tools)
 | Tool | What It Does |
 |------|-------------|
-| `figma_component_spec` | Component specification documentation |
+| `figma_design_system_scaffolder` | Scaffold a design system from scratch |
+| `figma_design_system_primitives` | Define primitive design tokens |
+| `figma_design_system_variables` | Manage design system variables |
+| `figma_token_naming_convention` | Token naming conventions |
+| `figma_decision_log` | Decision logging |
+| `figma_design_decision_log` | Design decision documentation |
 | `figma_health_report` | Design system health metrics |
-| `figma_ds_variables` | Manage design system variables |
+| `figma_component_spec` | Component specification documentation |
+| `figma_component_spec_sheet` | Full component spec sheets |
+| `figma_apg_doc` | ARIA Authoring Practices documentation |
+| `figma_token_migrate` | Token migration |
 | `figma_token_analytics` | Token usage analytics |
+| `figma_token_docs` | Token documentation |
+| `figma_taxonomy_docs` | Taxonomy documentation |
+| `figma_validate_dtcg` | DTCG token format validation |
+| `figma_token_math` | Token math operations |
+| `figma_color_operations` | Color manipulation and operations |
+| `figma_execute` | Execute arbitrary Figma plugin scripts |
+
+### Direct Figma Operations (36 tools)
+| Tool | What It Does |
+|------|-------------|
+| `figma_get_status` | Get Figma connection status |
+| `figma_navigate` | Navigate to a node |
+| `figma_get_selection` | Get current selection |
+| `figma_take_screenshot` | Screenshot a node |
+| `figma_get_node` | Get node details |
+| `figma_get_node_deep` | Deep node tree inspection |
+| `figma_batch_get_nodes` | Batch get multiple nodes |
+| `figma_clone_node` | Clone a node |
+| `figma_delete_node` | Delete a node |
+| `figma_move_node` | Move a node |
+| `figma_resize_node` | Resize a node |
+| `figma_rename_node` | Rename a node |
+| `figma_set_fills` | Set fill colors |
+| `figma_set_strokes` | Set stroke styles |
+| `figma_set_text` | Set text content |
+| `figma_set_description` | Set node description |
+| `figma_get_styles` | Get all styles |
+| `figma_create_child` | Create child elements |
+| `figma_search_components` | Search for components |
+| `figma_instantiate_component` | Create component instances |
+| `figma_get_pages` | List all pages |
+| `figma_create_page` | Create a new page |
+| `figma_create_variable_collection` | Create variable collection |
+| `figma_create_variable` | Create a variable |
+| `figma_update_variable` | Update variable value |
+| `figma_delete_variable` | Delete a variable |
+| `figma_rename_variable` | Rename a variable |
+| `figma_delete_variable_collection` | Delete variable collection |
+| `figma_add_mode` | Add a mode to collection |
+| `figma_rename_mode` | Rename a mode |
+| `figma_batch_create_variables` | Batch create variables |
+| `figma_batch_update_variables` | Batch update variables |
+| `figma_get_variables` | Get all variables |
+| `figma_switch_mode` | Switch variable mode on a frame |
+| `figma_list_modes` | List modes in a collection |
+| `figma_bind_variables_multi_mode` | Bind variables across modes |
 
 ---
 
@@ -126,7 +188,7 @@ npx figma-intelligence status   # Check connection status
 ```
 Your Machine                              Cloud
 +-------------------+                    +------------------+
-|  Figma Desktop    |                    |  29+ MCP Tools   |
+|  Figma Desktop    |                    |  88 MCP Tools    |
 |  (plugin runs     |                    |  (AI intelligence|
 |   inside Figma)   |                    |   runs here)     |
 |        |          |                    |        ^         |
