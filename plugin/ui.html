@@ -1,0 +1,4275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tiempos+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Claude.ai dark theme */
+      --bg:            #2b2a27;
+      --bg-header:     #242422;
+      --bg-input:      #3a3936;
+      --bg-user-msg:   #1e1d1b;
+      --border-header: rgba(255,255,255,0.06);
+      --text-primary:  #e8e6e1;
+      --text-secondary:#9b9890;
+      --text-muted:    #6b6966;
+      --text-ghost:    #46443f;
+      --accent:        #da7756;
+      --accent-hover:  #c86644;
+      --font-serif:    'Tiempos Text', 'Georgia', 'Times New Roman', serif;
+      --font-sans:     ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      font-size: 14px;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      height: 38px;
+      padding: 0 12px;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border-header);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .header-title {
+      font-size: 12.5px;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .header-chevron { color: var(--text-muted); line-height: 1; }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .icon-btn {
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      border: none; background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      padding: 0;
+    }
+    .icon-btn:hover {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+    }
+    .conn-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .conn-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--text-ghost);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .conn-dot.online  { background: #4d8f5f; }
+    .conn-dot.offline { background: #8f4d4d; }
+
+    /* ── Mode tabs (Chat / Code) ─────────────────────────────── */
+    .mode-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 4px 12px;
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border-header);
+      flex-shrink: 0;
+    }
+    .mode-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 5px 0;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.13s, color 0.13s;
+      font-family: var(--font-sans);
+    }
+    .mode-tab:hover { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+    .mode-tab.active {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+    }
+
+    /* ── Auth strip ──────────────────────────────────────────── */
+    .auth-strip {
+      padding: 4px 12px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      background: var(--bg-header);
+      border-bottom: 1px solid var(--border-header);
+      flex-shrink: 0;
+    }
+    .auth-strip.ok { color: #4d8f5f; }
+    .auth-email { color: #4d8f5f; }
+
+    /* ── Thread ──────────────────────────────────────────────── */
+    .thread {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 0 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .thread::-webkit-scrollbar { width: 3px; }
+    .thread::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 3px; }
+
+    /* ── Home state ──────────────────────────────────────────── */
+    .home-state {
+      padding: 8px 20px 16px;
+      animation: fadein 0.35s ease;
+    }
+    @keyframes fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+    .home-heading {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 18px;
+    }
+    .home-heading-text {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.025em;
+      line-height: 1.25;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.03);
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.14);
+      color: var(--text-primary);
+    }
+    .chip svg { flex-shrink: 0; opacity: 0.6; }
+
+    /* ── Message rows ────────────────────────────────────────── */
+    .msg-row {
+      padding: 0 20px;
+      animation: fadein 0.2s ease;
+    }
+
+    /* User — right-aligned dark pill */
+    .user-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 22px;
+    }
+    .user-bubble {
+      background: var(--bg-user-msg);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 18px;
+      border-bottom-right-radius: 6px;
+      padding: 9px 14px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-primary);
+      max-width: 88%;
+      word-break: break-word;
+    }
+
+    /* Claude — plain flowing text, serif, no bubble */
+    .claude-wrap {
+      margin-bottom: 6px;
+    }
+    .claude-text {
+      font-family: var(--font-serif);
+      font-size: 13.5px;
+      line-height: 1.72;
+      color: var(--text-primary);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .claude-text.rendered {
+      white-space: normal;
+    }
+    .claude-text.rendered p {
+      margin: 0 0 8px 0;
+    }
+    .claude-text.rendered p:last-child {
+      margin-bottom: 0;
+    }
+    .claude-text.rendered strong {
+      font-weight: 600;
+      color: #fff;
+    }
+    .claude-text.rendered em {
+      font-style: italic;
+      color: rgba(255,255,255,0.85);
+    }
+    .claude-text.rendered code {
+      font-family: var(--font-mono, 'SF Mono', 'Fira Code', monospace);
+      font-size: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: rgba(218,119,86,0.9);
+    }
+    .claude-text.rendered pre {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 10px 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+      position: relative;
+    }
+    .claude-text.rendered pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 11.5px;
+      color: var(--text-primary);
+    }
+    .code-block-actions {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .claude-text.rendered pre:hover .code-block-actions {
+      opacity: 1;
+    }
+    .code-block-actions button {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 10px;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .code-block-actions button:hover {
+      background: rgba(255,255,255,0.2);
+      color: var(--text-primary);
+    }
+    .code-block-actions button.copied {
+      background: rgba(74,222,128,0.2);
+      border-color: rgba(74,222,128,0.3);
+      color: #4ade80;
+    }
+    .claude-text.rendered ul, .claude-text.rendered ol {
+      margin: 6px 0;
+      padding-left: 20px;
+    }
+    .claude-text.rendered li {
+      margin-bottom: 4px;
+    }
+    .claude-text.rendered h1, .claude-text.rendered h2, .claude-text.rendered h3 {
+      font-weight: 600;
+      color: #fff;
+      margin: 12px 0 6px 0;
+    }
+    .claude-text.rendered h1 { font-size: 16px; }
+    .claude-text.rendered h2 { font-size: 14.5px; }
+    .claude-text.rendered h3 { font-size: 13.5px; }
+    .claude-text.rendered blockquote {
+      border-left: 3px solid rgba(218,119,86,0.4);
+      margin: 8px 0;
+      padding: 4px 12px;
+      color: rgba(255,255,255,0.7);
+    }
+    .claude-text.rendered hr {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      margin: 10px 0;
+    }
+
+    /* Tool pills */
+    .tool-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 6px 0 4px;
+    }
+    .activity-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 0 0 8px;
+    }
+    .activity-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10.5px;
+      line-height: 1.35;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+    }
+    .activity-line .activity-time {
+      flex: 0 0 48px;
+      color: rgba(255,255,255,0.32);
+      font-variant-numeric: tabular-nums;
+    }
+    .activity-line .activity-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(218,119,86,0.72);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .activity-line .activity-body {
+      color: rgba(255,255,255,0.72);
+      word-break: break-word;
+    }
+    .activity-line.tool .activity-body strong {
+      color: rgba(218,119,86,0.95);
+      font-weight: 600;
+    }
+    .activity-line.phase .activity-body strong {
+      color: rgba(160,132,232,0.95);
+      font-weight: 600;
+    }
+    .activity-line.phase .activity-dot {
+      background: rgba(160,132,232,0.72);
+    }
+
+    /* Tools-used summary shown after response completes */
+    .tools-used-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 8px 0 2px;
+    }
+    .tools-used-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(77,143,95,0.08);
+      border: 1px solid rgba(77,143,95,0.22);
+      color: rgba(77,143,95,0.9);
+      font-family: var(--font-sans);
+    }
+    .tools-used-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-family: var(--font-sans);
+    }
+    .citations-section { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .citations-label { font-size: 10.5px; color: var(--text-muted); margin-bottom: 4px; font-family: var(--font-sans); }
+    .citation-link {
+      display: block;
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 2px 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .citation-link:hover { text-decoration: underline; }
+    .tool-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      padding: 3px 9px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--text-muted);
+      width: fit-content;
+      font-family: var(--font-sans);
+    }
+    .tool-pill.running { border-color:rgba(218,119,86,.3); color:rgba(218,119,86,.9); background:rgba(218,119,86,.05); }
+    .tool-pill.done    { border-color:rgba(77,143,95,.3);  color:rgba(77,143,95,.9);  background:rgba(77,143,95,.05); }
+    .tool-pill.error   { border-color:rgba(143,77,77,.3);  color:rgba(220,120,120,.9);background:rgba(143,77,77,.05); }
+    .tool-spinner {
+      width: 8px; height: 8px;
+      border: 1.5px solid rgba(218,119,86,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-msg {
+      padding: 9px 13px;
+      background: rgba(160,60,60,0.1);
+      border: 1px solid rgba(160,60,60,0.18);
+      border-radius: 10px;
+      color: #c87878;
+      font-size: 12.5px;
+      line-height: 1.55;
+      max-width: 90%;
+      margin-bottom: 16px;
+    }
+
+    /* ── Thinking — Claude-style rotating words ─────────────── */
+    .thinking-row {
+      padding: 4px 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-sparkle {
+      flex-shrink: 0;
+      animation: sparkle-pulse 2s ease-in-out infinite;
+    }
+    @keyframes sparkle-pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+    .thinking-words {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: rgba(218,119,86,0.85);
+      position: relative;
+      height: 18px;
+      min-width: 120px;
+      overflow: hidden;
+    }
+    .thinking-word {
+      display: block;
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%;
+      line-height: 18px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      white-space: nowrap;
+    }
+    .thinking-word.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .thinking-word.exit {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    /* ── Input ───────────────────────────────────────────────── */
+    .input-area {
+      flex-shrink: 0;
+      padding: 6px 12px 10px;
+    }
+    .input-box {
+      background: var(--bg-input);
+      border-radius: 16px;
+    }
+    .input-main {
+      padding: 11px 14px 5px;
+    }
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.55;
+      resize: none;
+      min-height: 22px;
+      max-height: 120px;
+      overflow-y: auto;
+      display: block;
+    }
+    textarea::placeholder { color: var(--text-muted); }
+    textarea::-webkit-scrollbar { width: 3px; }
+    textarea::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+
+    .input-toolbar {
+      padding: 5px 8px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toolbar-left { display: flex; align-items: center; }
+    .toolbar-right { display: flex; align-items: center; gap: 5px; }
+
+    .tb-btn {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: background 0.13s, color 0.13s;
+    }
+    .tb-btn:hover:not(:disabled) { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+    .tb-btn:disabled { opacity: 0.25; cursor: default; }
+
+    .model-badge {
+      display: flex; align-items: center; gap: 3px;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 3px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: background 0.13s, color 0.13s;
+    }
+    .model-badge:hover { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+
+    /* Model dropdown */
+    .model-dropdown {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #353432;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 4px;
+      min-width: 160px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 100;
+      animation: dropIn 0.12s ease;
+    }
+    @keyframes dropIn { from { opacity:0; transform:translateX(-50%) translateY(4px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    .model-dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 7px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+    }
+    .model-dropdown-item:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+    .model-dropdown-item.active { color: var(--text-primary); }
+    .model-dropdown-item .check { color: var(--accent); font-size: 13px; opacity: 0; }
+    .model-dropdown-item.active .check { opacity: 1; }
+    .model-dropdown-item .model-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-left: 6px;
+    }
+
+    /* Attached files strip */
+    .attached-files {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 0 14px 6px;
+    }
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      max-width: 180px;
+      animation: fadein 0.15s ease;
+    }
+    .file-chip span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-chip-x {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1;
+      padding: 0 1px;
+      border-radius: 3px;
+      transition: color 0.1s, background 0.1s;
+      flex-shrink: 0;
+    }
+    .file-chip-x:hover { color: var(--text-primary); background: rgba(255,255,255,0.08); }
+
+    /* Send button — orange arrow-up */
+    .send-btn {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      transition: background 0.13s, transform 0.08s, opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .send-btn:active:not(:disabled) { transform: scale(0.93); }
+    .send-btn:disabled {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-ghost);
+      cursor: default;
+    }
+    .stop-btn {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      transition: background 0.13s;
+    }
+    .stop-btn:hover { background: rgba(255,255,255,0.1); }
+
+    .input-footer {
+      font-size: 9.5px;
+      color: var(--text-ghost);
+      text-align: center;
+      margin-top: 5px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .asterisk-spin, .tool-spinner { animation: none !important; }
+    }
+
+    /* ── Login / Provider Screen ─────────────────────────────── */
+    .login-screen {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 28px 20px 20px;
+      z-index: 200;
+      overflow-y: auto;
+      animation: fadein 0.3s ease;
+    }
+    .login-screen.hiding {
+      animation: fadeout 0.25s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes fadeout {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-8px); }
+    }
+    .login-logo { margin-bottom: 10px; }
+    .login-title {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.025em;
+      margin-bottom: 3px;
+      text-align: center;
+    }
+    .login-subtitle {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .provider-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+      max-width: 264px;
+    }
+    .provider-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 11px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.02);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .provider-card:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .provider-card.selected {
+      border-color: var(--accent);
+      background: rgba(218,119,86,0.06);
+    }
+    .provider-card.selected .provider-name { color: var(--text-primary); }
+    .provider-icon {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .provider-icon svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+    .pc-claude { background: rgba(218,119,86,0.14); }
+    .pc-openai { background: rgba(25,195,125,0.12); }
+    .pc-gemini { background: rgba(66,133,244,0.12); }
+    .pc-bridge { background: rgba(160,132,232,0.12); }
+    .pc-perplexity { background: rgba(32,191,187,0.12); }
+    .pc-stitch { background: rgba(66,133,244,0.12); }
+    .provider-info { flex: 1; min-width: 0; }
+    .provider-name {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 1px;
+    }
+    .provider-desc {
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+    .provider-check {
+      font-size: 13px;
+      color: var(--accent);
+      opacity: 0;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .provider-card.selected .provider-check { opacity: 1; }
+
+    /* Expandable area below the provider list */
+    .login-expand {
+      width: 100%;
+      max-width: 264px;
+      margin-top: 7px;
+    }
+    .login-api-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 9px;
+      padding: 9px 12px;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .login-api-input:focus { border-color: rgba(255,255,255,0.18); }
+    .login-api-input::placeholder { color: var(--text-ghost); }
+    .login-api-link {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+      text-decoration: none;
+    }
+    .login-bridge-info {
+      background: rgba(160,132,232,0.06);
+      border: 1px solid rgba(160,132,232,0.14);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .login-bridge-info code {
+      font-size: 10.5px;
+      color: rgba(160,132,232,0.9);
+      background: rgba(160,132,232,0.1);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .login-bridge-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .bridge-tool-tag {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(160,132,232,0.08);
+      border: 1px solid rgba(160,132,232,0.15);
+      color: rgba(160,132,232,0.8);
+    }
+    .login-continue {
+      margin-top: 14px;
+      width: 100%;
+      max-width: 264px;
+      padding: 10px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.13s, opacity 0.15s;
+      font-family: var(--font-sans);
+    }
+    .login-continue:hover:not(:disabled) { background: var(--accent-hover); }
+    .login-continue:disabled { opacity: 0.35; cursor: default; }
+    .login-hint {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-ghost);
+      text-align: center;
+      max-width: 240px;
+      min-height: 14px;
+    }
+
+    /* Provider badge in header */
+    .provider-badge {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 2px 7px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.13s, color 0.13s;
+    }
+    .provider-badge:hover {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-secondary);
+    }
+    .prov-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .prov-dot.claude { background: var(--accent); }
+    .prov-dot.openai { background: #19c37d; }
+    .prov-dot.gemini { background: #4285f4; }
+    .prov-dot.bridge { background: #a084e8; }
+    .prov-dot.perplexity { background: #20bfbb; }
+    .prov-dot.stitch { background: #4285F4; }
+
+    /* Bridge mode home state */
+    .bridge-home {
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      animation: fadein 0.35s ease;
+    }
+    .bridge-home-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: rgba(160,132,232,0.1);
+      border: 1px solid rgba(160,132,232,0.18);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 4px;
+    }
+    .bridge-home-title {
+      font-family: var(--font-serif);
+      font-size: 15px;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .bridge-home-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+      max-width: 220px;
+    }
+    .bridge-home-url {
+      font-size: 11px;
+      color: rgba(160,132,232,0.85);
+      background: rgba(160,132,232,0.08);
+      border: 1px solid rgba(160,132,232,0.14);
+      border-radius: 7px;
+      padding: 5px 10px;
+      margin-top: 2px;
+    }
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 8px;
+      z-index: 12;
+      cursor: ns-resize;
+      touch-action: none;
+    }
+    .resize-handle::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      opacity: 0;
+      transition: opacity 0.14s ease, background 0.14s ease;
+      pointer-events: none;
+    }
+    .resize-handle:hover::after,
+    .resize-handle.is-active::after {
+      opacity: 1;
+      background: rgba(255,255,255,0.32);
+    }
+    .resize-handle--top {
+      top: 0;
+    }
+    .resize-handle--top::after {
+      top: 1px;
+    }
+    .resize-handle--bottom {
+      bottom: 0;
+    }
+    .resize-handle--bottom::after {
+      bottom: 1px;
+    }
+    body.plugin-resizing,
+    body.plugin-resizing * {
+      cursor: ns-resize !important;
+      user-select: none !important;
+    }
+
+    /* ── Design System Picker ────────────────────────────────────── */
+    .sg-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 500;
+      display: flex;
+      align-items: flex-end;
+      animation: fadein 0.15s ease;
+    }
+    .sg-overlay.hiding {
+      animation: fadeout 0.2s ease forwards;
+      pointer-events: none;
+    }
+    .sg-modal {
+      width: 100%;
+      background: #2b2a27;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px 16px 0 0;
+      padding: 0 0 16px;
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: slideUp 0.22s cubic-bezier(0.32,0.72,0,1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sg-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 10px;
+      position: sticky;
+      top: 0;
+      background: #2b2a27;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      z-index: 1;
+    }
+    .sg-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .sg-close {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      transition: background 0.12s, color 0.12s;
+    }
+    .sg-close:hover { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+    .ds-filters {
+      display: flex;
+      gap: 4px;
+      padding: 8px 12px 4px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 46px;
+      background: #2b2a27;
+      z-index: 1;
+    }
+    .ds-filter-btn {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .ds-filter-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text-secondary); }
+    .ds-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .sg-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 8px 12px 0;
+    }
+    .sg-card {
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, transform 0.1s;
+      position: relative;
+      background: rgba(255,255,255,0.03);
+    }
+    .sg-card:hover { transform: scale(1.02); }
+    .sg-card.active { border-color: var(--accent); }
+    .ds-swatches {
+      display: flex;
+      gap: 4px;
+      padding: 12px 10px 8px;
+    }
+    .ds-swatch {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    .sg-card-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 0 10px 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ds-org {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      padding: 0 10px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ds-category-badge {
+      display: inline-block;
+      font-size: 8.5px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+      margin: 0 10px 8px;
+    }
+    .sg-card.active .sg-card-label { color: var(--accent); }
+    .sg-active-check {
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .sg-card.active .sg-active-check { opacity: 1; }
+
+    /* Design system chip in input */
+    .style-guide-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px 3px 7px;
+      border-radius: 999px;
+      background: rgba(218,119,86,0.12);
+      border: 1px solid rgba(218,119,86,0.28);
+      font-size: 10.5px;
+      color: var(--accent);
+      margin: 6px 14px 0;
+      cursor: default;
+      animation: fadein 0.15s ease;
+    }
+    .style-guide-chip-x {
+      cursor: pointer;
+      color: rgba(218,119,86,0.6);
+      font-size: 12px;
+      line-height: 1;
+      padding: 0 1px;
+      border-radius: 3px;
+      transition: color 0.1s;
+    }
+    .style-guide-chip-x:hover { color: var(--accent); }
+    .sg-btn-active { color: var(--accent) !important; }
+
+    /* ── Knowledge Sources Panel ──────────────────────────────── */
+    .ks-panel {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--bg-header);
+      border: 1px solid var(--border-header);
+      border-radius: 12px;
+      padding: 10px;
+      z-index: 200;
+      max-height: 240px;
+      overflow-y: auto;
+      animation: fadein 0.15s ease;
+    }
+    .ks-panel.open { display: block; }
+    .ks-panel-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .ks-input-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .ks-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      outline: none;
+    }
+    .ks-input:focus { border-color: rgba(218,119,86,0.4); }
+    .ks-input::placeholder { color: var(--text-ghost); }
+    .ks-add-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ks-add-btn:hover { background: var(--accent-hover); }
+    .ks-add-btn:disabled { opacity: 0.4; cursor: default; }
+    .ks-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      margin-bottom: 4px;
+    }
+    .ks-card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+    .ks-card-title {
+      font-size: 12px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ks-card-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .ks-card-remove {
+      background: transparent;
+      border: none;
+      color: var(--text-ghost);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .ks-card-remove:hover { color: var(--accent); background: rgba(255,255,255,0.06); }
+    .ks-card-preview {
+      font-size: 10px;
+      color: var(--text-ghost);
+      line-height: 1.4;
+      margin-top: 3px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.2s ease;
+    }
+    .ks-card.expanded .ks-card-preview {
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    .ks-card-toggle {
+      font-size: 9px;
+      color: var(--text-ghost);
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    .ks-card-toggle:hover { color: var(--text-secondary); }
+    .ks-card-chars {
+      font-size: 10px;
+      color: var(--text-ghost);
+      margin-left: 4px;
+    }
+    .ks-empty {
+      font-size: 11px;
+      color: var(--text-ghost);
+      text-align: center;
+      padding: 4px 0;
+    }
+    .ks-error {
+      font-size: 11px;
+      color: #e55;
+      padding: 4px 0;
+    }
+    .ks-success {
+      font-size: 11px;
+      color: #4a2;
+      padding: 4px 0;
+      animation: fadein 0.15s ease;
+    }
+    .ks-badge {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .ks-btn-wrap { position: relative; }
+    .ks-hub-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.1s;
+      margin-bottom: 2px;
+    }
+    .ks-hub-item:hover { background: rgba(255,255,255,0.06); }
+    .ks-hub-item.loading { opacity: 0.5; pointer-events: none; }
+    .ks-hub-icon { font-size: 18px; flex-shrink: 0; }
+    .ks-hub-info { min-width: 0; flex: 1; }
+    .ks-hub-name { font-size: 12px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ks-hub-meta { font-size: 10px; color: var(--text-ghost); }
+    .ks-hub-loaded {
+      font-size: 9px;
+      background: rgba(74,170,34,0.15);
+      color: #4a2;
+      padding: 1px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="resize-handle resize-handle--top" id="resize-handle-top" title="Drag to resize plugin height"></div>
+
+  <!-- Login / Provider Selection Screen -->
+  <div class="login-screen" id="login-screen" style="display:none">
+    <div class="login-logo">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+        <path d="M14 3V11M14 17V25M3 14H11M17 14H25M5.757 5.757L11.314 11.314M16.686 16.686L22.243 22.243M5.757 22.243L11.314 16.686M16.686 11.314L22.243 5.757" stroke="#da7756" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="login-title">Figma Intelligence</div>
+    <div class="login-subtitle">Choose your AI assistant</div>
+
+    <div class="provider-list">
+      <!-- Claude -->
+      <div class="provider-card" id="pc-claude" onclick="selectLoginProvider('claude')">
+        <div class="provider-icon pc-claude" id="claude-logo-slot"></div>
+        <div class="provider-info">
+          <div class="provider-name">Claude</div>
+          <div class="provider-desc" id="pd-claude">Anthropic &middot; Subscription required</div>
+        </div>
+        <div class="provider-check">&#10003;</div>
+      </div>
+
+      <!-- OpenAI -->
+      <div class="provider-card" id="pc-openai" onclick="selectLoginProvider('openai')">
+        <div class="provider-icon pc-openai" id="codex-logo-slot"></div>
+        <div class="provider-info">
+          <div class="provider-name">OpenAI</div>
+          <div class="provider-desc" id="pd-openai">OpenAI &middot; Subscription required</div>
+        </div>
+        <div class="provider-check">&#10003;</div>
+      </div>
+
+      <!-- Gemini -->
+      <div class="provider-card" id="pc-gemini" onclick="selectLoginProvider('gemini')">
+        <div class="provider-icon pc-gemini" id="gemini-logo-slot"></div>
+        <div class="provider-info">
+          <div class="provider-name">Gemini</div>
+          <div class="provider-desc" id="pd-gemini">Google AI &middot; Subscription or API key</div>
+        </div>
+        <div class="provider-check">&#10003;</div>
+      </div>
+
+      <!-- Perplexity (Research) -->
+      <div class="provider-card" id="pc-perplexity" onclick="selectLoginProvider('perplexity')">
+        <div class="provider-icon pc-perplexity" id="perplexity-logo-slot">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="#20bfbb" stroke-width="1.5"/>
+            <path d="M12 7v5l3.5 3.5" stroke="#20bfbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="1.5" fill="#20bfbb"/>
+          </svg>
+        </div>
+        <div class="provider-info">
+          <div class="provider-name">Perplexity</div>
+          <div class="provider-desc" id="pd-perplexity">Research AI &middot; API key required</div>
+        </div>
+        <div class="provider-check">&#10003;</div>
+      </div>
+
+      <!-- Google Stitch -->
+      <div class="provider-card" id="pc-stitch" onclick="selectLoginProvider('stitch')">
+        <div class="provider-icon pc-stitch">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke="#4285F4" stroke-width="1.5"/>
+            <path d="M7 8h10M7 12h6M7 16h8" stroke="#4285F4" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="provider-info">
+          <div class="provider-name">Stitch</div>
+          <div class="provider-desc" id="pd-stitch">Google AI &middot; Access token required</div>
+        </div>
+        <div class="provider-check">&#10003;</div>
+      </div>
+
+      <!-- External Tool / Bridge -->
+      <div class="provider-card" id="pc-bridge" onclick="selectLoginProvider('bridge')">
+        <div class="provider-icon pc-bridge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12h4M16 12h4M8 12a4 4 0 008 0M8 12a4 4 0 018 0" stroke="#a084e8" stroke-width="1.5" stroke-linecap="round"/>
+            <circle cx="4" cy="12" r="1.5" fill="#a084e8"/>
+            <circle cx="20" cy="12" r="1.5" fill="#a084e8"/>
+          </svg>
+        </div>
+        <div class="provider-info">
+          <div class="provider-name">External Tool</div>
+          <div class="provider-desc">VS Code &middot; Cursor &middot; Antigravity &middot; More</div>
+        </div>
+        <div class="provider-check">&#10003;</div>
+      </div>
+    </div>
+
+    <!-- API key input (OpenAI / Gemini) -->
+    <div class="login-expand" id="login-api-expand" style="display:none">
+      <input
+        class="login-api-input"
+        type="password"
+        id="login-api-key"
+        placeholder="Paste your API key&hellip;"
+        oninput="updateLoginContinue()"
+      />
+      <span class="login-api-link" id="login-api-link"></span>
+    </div>
+
+    <!-- Stitch Google Sign-In -->
+    <div class="login-expand" id="login-stitch-auth" style="display:none">
+      <button
+        id="stitch-google-signin-btn"
+        onclick="startStitchGoogleAuth()"
+        style="width:100%;padding:12px 16px;border:none;border-radius:8px;background:#4285F4;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px"
+      >
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+        Sign in with Google
+      </button>
+      <div id="stitch-auth-status" style="text-align:center;font-size:12px;color:#888;min-height:18px"></div>
+    </div>
+
+    <!-- Project name (Stitch, optional) -->
+    <div class="login-expand" id="login-project-expand" style="display:none">
+      <input
+        class="login-api-input"
+        type="text"
+        id="login-project-id"
+        placeholder="Project name (optional)"
+      />
+    </div>
+
+    <!-- Bridge mode info -->
+    <div class="login-expand" id="login-bridge-expand" style="display:none">
+      <div class="login-bridge-info">
+        Your AI tool connects to Figma via MCP at<br>
+        <code>ws://localhost:9001</code><br><br>
+        Point any MCP-compatible tool here and it can read &amp; modify your Figma designs directly.
+        <div class="login-bridge-tools">
+          <span class="bridge-tool-tag">VS Code Copilot</span>
+          <span class="bridge-tool-tag">Cursor</span>
+          <span class="bridge-tool-tag">Antigravity</span>
+          <span class="bridge-tool-tag">Claude Desktop</span>
+          <span class="bridge-tool-tag">Any MCP client</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="login-continue" id="login-continue-btn" disabled onclick="continueWithProvider()">
+      Continue
+    </button>
+    <div class="login-hint" id="login-hint">Select an AI provider to get started</div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <svg width="14" height="14" viewBox="0 0 28 28" fill="none">
+        <path d="M14 3V11M14 17V25M3 14H11M17 14H25M5.757 5.757L11.314 11.314M16.686 16.686L22.243 22.243M5.757 22.243L11.314 16.686M16.686 11.314L22.243 5.757" stroke="#da7756" stroke-width="2.8" stroke-linecap="round"/>
+      </svg>
+      <span class="header-title" id="header-title">Figma Intelligence</span>
+      <div class="provider-badge" id="provider-badge" onclick="showLoginScreen()"></div>
+    </div>
+    <div class="header-controls">
+      <button class="icon-btn" id="new-chat-btn" title="New Chat" onclick="startNewConversation()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+      </button>
+      <div class="conn-pill">
+        <div class="conn-dot" id="conn-dot"></div>
+        <span id="conn-text">Connecting…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth strip -->
+  <div class="auth-strip" id="auth-strip">
+    <span id="auth-text">Checking provider subscriptions…</span>
+  </div>
+
+  <!-- VS Code connection status (shown in dual mode) -->
+  <div class="auth-strip" id="vscode-status" style="display:none"></div>
+
+  <!-- Mode tabs (Chat / Code / Design+Code) -->
+  <div class="mode-tabs" id="mode-tabs">
+    <button class="mode-tab" id="mode-tab-chat" onclick="switchMode('chat')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+    </button>
+    <button class="mode-tab active" id="mode-tab-code" onclick="switchMode('code')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      Code
+    </button>
+    <button class="mode-tab" id="mode-tab-dual" onclick="switchMode('dual')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Design + Code
+    </button>
+  </div>
+
+  <!-- Thread -->
+  <div class="thread" id="thread">
+    <!-- Bridge mode home (shown instead of chat home when provider = bridge) -->
+    <div class="bridge-home" id="bridge-home" style="display:none">
+      <div class="bridge-home-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M4 12h4M16 12h4M8 12a4 4 0 008 0M8 12a4 4 0 018 0" stroke="#a084e8" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="4" cy="12" r="1.5" fill="#a084e8"/>
+          <circle cx="20" cy="12" r="1.5" fill="#a084e8"/>
+        </svg>
+      </div>
+      <div class="bridge-home-title">Bridge Mode Active</div>
+      <div class="bridge-home-desc">
+        Your AI tool connects to this Figma plugin at<br>
+        <span class="bridge-home-url">ws://localhost:9001</span>
+      </div>
+      <div class="bridge-home-desc" style="margin-top:6px">
+        Use VS Code Copilot, Cursor, Antigravity, or any<br>MCP-compatible tool to control your Figma designs.
+      </div>
+    </div>
+    <!-- Code mode home -->
+    <div class="home-state" id="home-state">
+      <div class="home-heading">
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+          <path d="M14 3V11M14 17V25M3 14H11M17 14H25M5.757 5.757L11.314 11.314M16.686 16.686L22.243 22.243M5.757 22.243L11.314 16.686M16.686 11.314L22.243 5.757" stroke="#da7756" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="home-heading-text">How can I help you design?</div>
+      </div>
+      <div class="chips">
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M3 4h6M3 6.5h3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Create a login screen
+        </div>
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2.5" width="9" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 5h5M3.5 7h2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Design a button component
+        </div>
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 9L4 5.5L6.5 7.5L9 4L11 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Generate a dashboard layout
+        </div>
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>
+          Set up a color system
+        </div>
+      </div>
+    </div>
+    <!-- Chat mode home (hidden, captured as template) -->
+    <div class="home-state" id="chat-home" style="display:none">
+      <div class="home-heading">
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+          <path d="M14 3V11M14 17V25M3 14H11M17 14H25M5.757 5.757L11.314 11.314M16.686 16.686L22.243 22.243M5.757 22.243L11.314 16.686M16.686 11.314L22.243 5.757" stroke="#da7756" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="home-heading-text">What would you like to know?</div>
+      </div>
+      <div class="chips">
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 4.5C4.5 3.7 5.2 3 6 3s1.5.7 1.5 1.5c0 .8-.6 1.1-1 1.3-.2.1-.5.3-.5.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="8.5" r=".6" fill="currentColor"/></svg>
+          What are design tokens?
+        </div>
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 4.5C4.5 3.7 5.2 3 6 3s1.5.7 1.5 1.5c0 .8-.6 1.1-1 1.3-.2.1-.5.3-.5.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="8.5" r=".6" fill="currentColor"/></svg>
+          How should I structure my variables?
+        </div>
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 4.5C4.5 3.7 5.2 3 6 3s1.5.7 1.5 1.5c0 .8-.6 1.1-1 1.3-.2.1-.5.3-.5.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="8.5" r=".6" fill="currentColor"/></svg>
+          Best practices for auto layout
+        </div>
+        <div class="chip" onclick="useChip(this)">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 4.5C4.5 3.7 5.2 3 6 3s1.5.7 1.5 1.5c0 .8-.6 1.1-1 1.3-.2.1-.5.3-.5.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="8.5" r=".6" fill="currentColor"/></svg>
+          Explain component variants
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Design System Modal -->
+  <div class="sg-overlay" id="sg-overlay" style="display:none" onclick="onSgOverlayClick(event)">
+    <div class="sg-modal" id="sg-modal">
+      <div class="sg-header">
+        <span class="sg-title">Pick a Design System</span>
+        <button class="sg-close" onclick="closeStyleGuideModal()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="ds-filters" id="ds-filters"></div>
+      <div class="sg-grid" id="sg-grid"></div>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="input-area" style="position:relative">
+    <div id="style-guide-chip-container"></div>
+    <!-- Knowledge Sources Panel -->
+    <div class="ks-panel" id="ks-panel">
+      <div class="ks-panel-title">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 2h8a2 2 0 012 2v8a2 2 0 01-2 2H3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3 2v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Knowledge Sources
+      </div>
+      <!-- Tab switcher: 4 tabs -->
+      <div style="display:flex;gap:0;margin-bottom:8px;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+        <button class="ks-tab" id="ks-tab-hub" onclick="switchKsTab('hub')" style="flex:1;padding:5px 8px;font-size:10.5px;border:none;cursor:pointer;background:rgba(255,255,255,0.08);color:var(--text-primary);font-family:var(--font-sans)">Hub</button>
+        <button class="ks-tab" id="ks-tab-file" onclick="switchKsTab('file')" style="flex:1;padding:5px 8px;font-size:10.5px;border:none;cursor:pointer;background:transparent;color:var(--text-muted);font-family:var(--font-sans)">Upload</button>
+        <button class="ks-tab" id="ks-tab-url" onclick="switchKsTab('url')" style="flex:1;padding:5px 8px;font-size:10.5px;border:none;cursor:pointer;background:transparent;color:var(--text-muted);font-family:var(--font-sans)">URL</button>
+        <button class="ks-tab" id="ks-tab-text" onclick="switchKsTab('text')" style="flex:1;padding:5px 8px;font-size:10.5px;border:none;cursor:pointer;background:transparent;color:var(--text-muted);font-family:var(--font-sans)">Paste</button>
+        <button class="ks-tab" id="ks-tab-web" onclick="switchKsTab('web')" style="flex:1;padding:5px 8px;font-size:10.5px;border:none;cursor:pointer;background:transparent;color:var(--text-muted);font-family:var(--font-sans)">Web</button>
+      </div>
+      <!-- Knowledge Hub -->
+      <div id="ks-hub-section">
+        <div style="font-size:10px;color:var(--text-ghost);margin-bottom:6px">Pre-loaded reference library. Click a file to activate it as context.</div>
+        <div id="ks-hub-list" style="max-height:160px;overflow-y:auto">
+          <div class="ks-empty" style="padding:8px 0">Loading hub...</div>
+        </div>
+      </div>
+      <!-- File upload -->
+      <div id="ks-file-section" style="display:none">
+        <div class="ks-input-row">
+          <button class="ks-add-btn" id="ks-file-btn" onclick="document.getElementById('ks-file-input').click()" style="width:100%;padding:12px;text-align:center">Choose PDF, DOCX, TXT, or MD file...</button>
+          <input type="file" id="ks-file-input" accept=".pdf,.docx,.doc,.txt,.md,.csv,.json,.xml,.html" style="display:none" />
+        </div>
+        <div id="ks-file-name" style="display:none;font-size:11px;color:var(--text-secondary);margin-bottom:6px"></div>
+      </div>
+      <!-- URL input -->
+      <div id="ks-url-section" style="display:none">
+        <div class="ks-input-row">
+          <input class="ks-input" id="ks-url-input" placeholder="Paste any web URL (article, docs, blog...)" />
+          <button class="ks-add-btn" id="ks-url-btn" onclick="addKsUrl()">Add</button>
+        </div>
+      </div>
+      <!-- Text paste input -->
+      <div id="ks-text-section" style="display:none">
+        <input class="ks-input" id="ks-paste-title" placeholder="Title (e.g. UX Research Notes)" style="margin-bottom:6px" />
+        <textarea class="ks-input" id="ks-paste-content" placeholder="Paste your content here..." style="min-height:80px;max-height:140px;resize:vertical;margin-bottom:6px"></textarea>
+        <button class="ks-add-btn" id="ks-paste-btn" onclick="addKsText()" style="width:100%">Add Content</button>
+      </div>
+      <!-- Web Reference Sites -->
+      <div id="ks-web-section" style="display:none">
+        <div style="font-size:10px;color:var(--text-ghost);margin-bottom:6px">Add authoritative design reference sites. Chat mode auto-searches these for answers.</div>
+        <div class="ks-input-row">
+          <input class="ks-input" id="ks-web-name" placeholder="Site name (e.g. Nielsen Norman Group)" style="margin-bottom:4px" />
+        </div>
+        <div class="ks-input-row">
+          <input class="ks-input" id="ks-web-url" placeholder="Site URL (e.g. nngroup.com)" />
+          <button class="ks-add-btn" id="ks-web-btn" onclick="addReferenceSite()">Add</button>
+        </div>
+        <div id="ks-web-list" style="margin-top:8px;max-height:140px;overflow-y:auto"></div>
+      </div>
+      <div id="ks-error" class="ks-error" style="display:none"></div>
+      <div id="ks-success" class="ks-success" style="display:none"></div>
+      <div id="ks-list"></div>
+    </div>
+    <div class="input-box">
+      <div class="attached-files" id="attached-files" style="display:none"></div>
+      <div class="input-main">
+        <textarea
+          id="input"
+          placeholder="How can I help you today?"
+          rows="1"
+          disabled
+        ></textarea>
+      </div>
+      <div class="input-toolbar">
+        <div class="toolbar-left">
+          <button class="tb-btn" id="attach-btn" title="Attach file">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M13.5 7.5L7.5 13.5C5.843 15.157 3.157 15.157 1.5 13.5C-0.157 11.843 -0.157 9.157 1.5 7.5L7.5 1.5C8.605 0.395 10.395 0.395 11.5 1.5C12.605 2.605 12.605 4.395 11.5 5.5L5.5 11.5C4.948 12.052 4.052 12.052 3.5 11.5C2.948 10.948 2.948 10.052 3.5 9.5L9.5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="tb-btn" id="style-guide-btn" title="Pick a design system" onclick="openStyleGuideModal()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="5" cy="5" r="2" stroke="currentColor" stroke-width="1.3"/>
+              <circle cx="11" cy="5" r="2" stroke="currentColor" stroke-width="1.3"/>
+              <circle cx="5" cy="11" r="2" stroke="currentColor" stroke-width="1.3"/>
+              <circle cx="11" cy="11" r="2" stroke="currentColor" stroke-width="1.3"/>
+            </svg>
+          </button>
+          <div class="ks-btn-wrap">
+            <button class="tb-btn" id="ks-btn" title="Knowledge Sources" onclick="toggleKsPanel()">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M3 2h8a2 2 0 012 2v8a2 2 0 01-2 2H3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                <path d="M3 2v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M6 5h4M6 8h4M6 11h2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <span class="ks-badge" id="ks-badge" style="display:none">0</span>
+          </div>
+          <input type="file" id="file-input" multiple style="display:none" accept="image/*,.pdf,.txt,.json,.csv,.svg,.md,.html,.css,.js,.ts,.jsx,.tsx,.py,.go,.rs,.java,.rb,.yml,.yaml,.xml,.sql,.sh">
+        </div>
+        <div class="toolbar-right">
+          <div class="model-badge" id="model-badge" onclick="toggleModelDropdown(event)">
+            <span id="model-label">Sonnet</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <button class="tb-btn" disabled title="Voice">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M1 8h2M4 5v6M7 3v10M10 5v6M13 8h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="send-btn" id="send-btn" disabled title="Send (Enter)">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M7 12V2M7 2L3 6M7 2L11 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  <div class="input-footer" id="input-footer">copyright ramsarjal</div>
+  </div>
+
+  <div class="resize-handle resize-handle--bottom" id="resize-handle-bottom" title="Drag to resize plugin height"></div>
+</div>
+
+<script>
+  /* ── Helpers ──────────────────────────────────────────────────────────── */
+  function uuid() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  var TOOL_LABELS = {
+    // Vision / Audit
+    figma_screen_cloner: "Clone screen",
+    figma_visual_audit: "Visual audit",
+    figma_a11y_audit: "Accessibility audit",
+    figma_sketch_to_design: "Sketch → design",
+    figma_design_from_ref: "Design from reference",
+    // Accuracy / Layout
+    figma_intent_translator: "Translate intent",
+    figma_layout_intelligence: "Layout intelligence",
+    figma_variant_expander: "Expand variants",
+    figma_theme_generator: "Generate theme",
+    figma_lint_rules: "Lint rules",
+    figma_component_audit: "Component audit",
+    figma_component_archaeologist: "Component archaeology",
+    // Generation
+    figma_page_architect: "Page architect",
+    figma_generate_image_and_insert: "Generate image",
+    figma_unsplash_search: "Image search",
+    figma_url_to_frame: "URL → frame",
+    figma_system_drift: "System drift",
+    figma_prototype_map: "Prototype map",
+    figma_animated_build: "Animated build",
+    // Sync
+    figma_animation_specifier: "Animation spec",
+    figma_sync_from_code: "Sync from code",
+    figma_webhook_listener: "Webhook listener",
+    // Governance
+    figma_design_system_scaffolder: "DS scaffolder",
+    figma_design_system_primitives: "DS primitives",
+    figma_design_system_variables: "DS variables",
+    figma_token_naming_convention: "Token naming",
+    figma_decision_log: "Decision log",
+    figma_health_report: "Health report",
+    figma_generate_spec: "Generate spec",
+    figma_apg_doc: "APG doc",
+    figma_token_migrate: "Token migrate",
+    // Bridge / Execute
+    figma_execute: "Execute code",
+    figma_get_status: "Check status",
+    figma_navigate: "Navigate",
+    figma_get_selection: "Get selection",
+    figma_take_screenshot: "Screenshot",
+    figma_get_node: "Read node",
+    figma_create_variable_collection: "Create var collection",
+    figma_create_variable: "Create variable",
+    figma_update_variable: "Update variable",
+    figma_delete_variable: "Delete variable",
+    figma_rename_variable: "Rename variable",
+    figma_delete_variable_collection: "Delete var collection",
+    figma_add_mode: "Add mode",
+    figma_rename_mode: "Rename mode",
+    figma_batch_create_variables: "Batch create variables",
+    figma_batch_update_variables: "Batch update variables",
+    figma_get_variables: "Get variables",
+    figma_clone_node: "Clone node",
+    figma_delete_node: "Delete node",
+    figma_move_node: "Move node",
+    figma_resize_node: "Resize node",
+    figma_rename_node: "Rename node",
+    figma_set_fills: "Set fills",
+    figma_set_strokes: "Set strokes",
+    figma_set_text: "Set text",
+    figma_search_components: "Search components",
+    figma_instantiate_component: "Use component",
+    figma_set_description: "Set description",
+    figma_get_styles: "Get styles",
+    figma_create_child: "Create node",
+    figma_create_frame: "Create frame",
+    figma_get_pages: "Get pages",
+    figma_create_page: "Create page",
+    // Generic
+    exec_command: "Run command",
+    mcp_tool: "MCP tool",
+  };
+
+  function toolLabel(name) {
+    return TOOL_LABELS[name] || name.replace(/^figma_/, "").replace(/_/g, " ");
+  }
+
+  function useChip(el) {
+    var t = el.textContent.trim();
+    input.value = t;
+    input.focus();
+    autoResize();
+    updateSend();
+  }
+
+  var PROVIDER_LOGOS = {
+    claude: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z" fill="#D97757" fill-rule="nonzero"></path></svg>',
+    gemini: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="#3186FF"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#gemini-fill-0)"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#gemini-fill-1)"></path><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#gemini-fill-2)"></path><defs><linearGradient gradientUnits="userSpaceOnUse" id="gemini-fill-0" x1="7" x2="11" y1="15.5" y2="12"><stop stop-color="#08B962"></stop><stop offset="1" stop-color="#08B962" stop-opacity="0"></stop></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="gemini-fill-1" x1="8" x2="11.5" y1="5.5" y2="11"><stop stop-color="#F94543"></stop><stop offset="1" stop-color="#F94543" stop-opacity="0"></stop></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="gemini-fill-2" x1="3.5" x2="17.5" y1="13.5" y2="12"><stop stop-color="#FABC12"></stop><stop offset=".46" stop-color="#FABC12" stop-opacity="0"></stop></linearGradient></defs></svg>',
+    openai: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"></path><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#codex-fill)"></path><defs><linearGradient gradientUnits="userSpaceOnUse" id="codex-fill" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"></stop><stop offset=".5" stop-color="#7A9DFF"></stop><stop offset="1" stop-color="#3941FF"></stop></linearGradient></defs></svg>'
+  };
+
+  var PLUGIN_SIZE_KEY = "figma-intelligence-plugin-height";
+  var DEFAULT_PLUGIN_WIDTH = 320;
+  var DEFAULT_PLUGIN_HEIGHT = 480;
+  var MIN_PLUGIN_HEIGHT = 480;
+  var MAX_PLUGIN_HEIGHT = 960;
+  var pluginHeight = DEFAULT_PLUGIN_HEIGHT;
+  var pluginResizeState = null;
+
+  function renderProviderLogos() {
+    var claudeSlot = document.getElementById("claude-logo-slot");
+    var codexSlot = document.getElementById("codex-logo-slot");
+    var geminiSlot = document.getElementById("gemini-logo-slot");
+    if (claudeSlot) claudeSlot.innerHTML = PROVIDER_LOGOS.claude;
+    if (codexSlot) codexSlot.innerHTML = PROVIDER_LOGOS.openai;
+    if (geminiSlot) geminiSlot.innerHTML = PROVIDER_LOGOS.gemini;
+  }
+
+  function clampPluginHeight(height) {
+    return Math.max(MIN_PLUGIN_HEIGHT, Math.min(MAX_PLUGIN_HEIGHT, height));
+  }
+
+  function persistPluginHeight() {
+    try { localStorage.setItem(PLUGIN_SIZE_KEY, String(pluginHeight)); } catch (e) {}
+  }
+
+  function requestPluginResize(height) {
+    pluginHeight = clampPluginHeight(height);
+    persistPluginHeight();
+    parent.postMessage({
+      pluginMessage: {
+        type: "resize-ui",
+        width: DEFAULT_PLUGIN_WIDTH,
+        height: pluginHeight,
+      },
+    }, "*");
+  }
+
+  function initPluginSize() {
+    var saved = null;
+    try { saved = Number(localStorage.getItem(PLUGIN_SIZE_KEY)); } catch (e) {}
+    if (saved && isFinite(saved)) {
+      pluginHeight = clampPluginHeight(saved);
+    }
+    requestPluginResize(pluginHeight);
+  }
+
+  function beginPluginResize(edge, event) {
+    if (!event) return;
+
+    pluginResizeState = {
+      edge: edge,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight: pluginHeight,
+      handle: event.currentTarget,
+    };
+
+    if (pluginResizeState.handle && pluginResizeState.handle.setPointerCapture) {
+      pluginResizeState.handle.setPointerCapture(event.pointerId);
+    }
+
+    if (pluginResizeState.handle) {
+      pluginResizeState.handle.classList.add("is-active");
+    }
+    document.body.classList.add("plugin-resizing");
+    event.preventDefault();
+  }
+
+  function updatePluginResize(event) {
+    if (!pluginResizeState || event.pointerId !== pluginResizeState.pointerId) return;
+
+    var deltaY = event.clientY - pluginResizeState.startY;
+    var nextHeight = pluginResizeState.edge === "top"
+      ? pluginResizeState.startHeight - deltaY
+      : pluginResizeState.startHeight + deltaY;
+
+    requestPluginResize(nextHeight);
+    event.preventDefault();
+  }
+
+  function endPluginResize(event) {
+    if (!pluginResizeState) return;
+    if (event && event.pointerId !== pluginResizeState.pointerId) return;
+
+    if (pluginResizeState.handle) {
+      pluginResizeState.handle.classList.remove("is-active");
+      if (
+        event &&
+        pluginResizeState.handle.releasePointerCapture &&
+        pluginResizeState.handle.hasPointerCapture &&
+        pluginResizeState.handle.hasPointerCapture(pluginResizeState.pointerId)
+      ) {
+        pluginResizeState.handle.releasePointerCapture(pluginResizeState.pointerId);
+      }
+    }
+
+    pluginResizeState = null;
+    document.body.classList.remove("plugin-resizing");
+  }
+
+  function initPluginResizeHandles() {
+    ["top", "bottom"].forEach(function(edge) {
+      var handle = document.getElementById("resize-handle-" + edge);
+      if (!handle) return;
+      handle.addEventListener("pointerdown", function(event) {
+        beginPluginResize(edge, event);
+      });
+      handle.addEventListener("pointermove", updatePluginResize);
+      handle.addEventListener("pointerup", endPluginResize);
+      handle.addEventListener("pointercancel", endPluginResize);
+    });
+  }
+
+  /* ── Model switcher ───────────────────────────────────────────────────── */
+  var PROVIDER_MODELS = {
+    claude: [
+      { id: "claude-opus-4-6",          label: "Opus 4",    desc: "Most capable · default" },
+      { id: "claude-sonnet-4-6",        label: "Sonnet 4",  desc: "Faster · balanced" },
+      { id: "claude-haiku-4-5-20251001",label: "Haiku 4.5", desc: "Fastest · lightweight" },
+    ],
+    openai: [
+      { id: "gpt-5.4",      label: "GPT-5.4",      desc: "Best quality" },
+      { id: "gpt-5-codex",  label: "GPT-5-Codex",  desc: "Best for coding-heavy tool use" },
+      { id: "gpt-5",        label: "GPT-5",        desc: "Stable general-purpose" },
+      { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", desc: "Faster" },
+    ],
+    gemini: [
+      { id: "gemini-2.5-flash",    label: "Gemini 2.5 Flash",    desc: "Fast + capable (recommended)" },
+      { id: "gemini-2.5-pro",      label: "Gemini 2.5 Pro",      desc: "Most capable (may hit rate limits)" },
+      { id: "gemini-2.0-flash",    label: "Gemini 2.0 Flash",    desc: "Balanced" },
+      { id: "gemini-1.5-flash-8b", label: "Gemini 1.5 Flash 8B", desc: "Fastest" },
+    ],
+    bridge: [],
+    stitch: [
+      { id: "experimental", label: "Experimental", desc: "Default generation mode" },
+    ],
+    perplexity: [
+      { id: "sonar-pro",           label: "Sonar Pro",           desc: "Thorough research" },
+      { id: "sonar",               label: "Sonar",               desc: "Fast search answers" },
+      { id: "sonar-reasoning-pro", label: "Sonar Reasoning Pro", desc: "Best reasoning" },
+      { id: "sonar-reasoning",     label: "Sonar Reasoning",     desc: "Step-by-step analysis" },
+    ],
+  };
+  var selectedModelByProvider = {
+    claude: "claude-opus-4-6",
+    openai: "gpt-5.4",
+    gemini: "gemini-2.5-flash",
+    bridge: null,
+    stitch: "experimental",
+    perplexity: "sonar-pro",
+  };
+  var modelDropdownOpen = false;
+
+  function getActiveProvider() {
+    return selectedLoginProvider || "claude";
+  }
+
+  function getModelsForProvider(provider) {
+    return PROVIDER_MODELS[provider || getActiveProvider()] || PROVIDER_MODELS.claude;
+  }
+
+  function getSelectedModel(provider) {
+    var activeProvider = provider || getActiveProvider();
+    var models = getModelsForProvider(activeProvider);
+    var selected = selectedModelByProvider[activeProvider];
+    if (!models.length) return null;
+    if (models.some(function(m) { return m.id === selected; })) return selected;
+    selectedModelByProvider[activeProvider] = models[0].id;
+    return models[0].id;
+  }
+
+  function syncModelBadge() {
+    var badge = document.getElementById("model-badge");
+    var label = document.getElementById("model-label");
+    var provider = getActiveProvider();
+    var models = getModelsForProvider(provider);
+    if (!badge || !label) return;
+    if (!models.length || provider === "bridge") {
+      badge.style.display = "none";
+      closeModelDropdown();
+      return;
+    }
+    badge.style.display = "inline-flex";
+    var selected = getSelectedModel(provider);
+    var model = models.find(function(item) { return item.id === selected; });
+    label.textContent = model ? model.label : selected;
+  }
+
+  function toggleModelDropdown(e) {
+    e.stopPropagation();
+    if (!getModelsForProvider(getActiveProvider()).length) return;
+    if (modelDropdownOpen) { closeModelDropdown(); return; }
+    modelDropdownOpen = true;
+    var badge = document.getElementById("model-badge");
+    var dd = document.createElement("div");
+    dd.className = "model-dropdown";
+    dd.id = "model-dropdown";
+    dd.onclick = function(ev) { ev.stopPropagation(); };
+    var provider = getActiveProvider();
+    var models = getModelsForProvider(provider);
+    var selectedModel = getSelectedModel(provider);
+    models.forEach(function(m) {
+      var item = document.createElement("div");
+      item.className = "model-dropdown-item" + (m.id === selectedModel ? " active" : "");
+      item.innerHTML =
+        '<div>' + m.label + '<span class="model-desc">' + m.desc + '</span></div>' +
+        '<span class="check">\u2713</span>';
+      item.onclick = function() { selectModel(m.id); };
+      dd.appendChild(item);
+    });
+    badge.appendChild(dd);
+    setTimeout(function() { document.addEventListener("click", closeModelDropdown); }, 0);
+  }
+
+  function closeModelDropdown() {
+    modelDropdownOpen = false;
+    var dd = document.getElementById("model-dropdown");
+    if (dd) dd.remove();
+    document.removeEventListener("click", closeModelDropdown);
+  }
+
+  function selectModel(id) {
+    selectedModelByProvider[getActiveProvider()] = id;
+    syncModelBadge();
+    closeModelDropdown();
+  }
+
+  /* ── Design System ──────────────────────────────────────────────────── */
+  var activeDesignSystem = null;
+
+  var DESIGN_SYSTEMS_UI = [
+    { id: "mui",       name: "Material UI",    org: "Google",    category: "Consumer",    swatches: ["#1976D2","#9C27B0","#D32F2F","#2E7D32","#ED6C02"], font: "Roboto",              radius: "4-16px" },
+    { id: "carbon",    name: "IBM Carbon",     org: "IBM",       category: "Enterprise",  swatches: ["#0F62FE","#DA1E28","#24A148","#F1C21B","#6929C4"], font: "IBM Plex Sans",       radius: "0px" },
+    { id: "atlassian", name: "Atlassian DS",   org: "Atlassian", category: "Enterprise",  swatches: ["#0052CC","#DE350B","#00875A","#FF991F","#6554C0"], font: "Inter",               radius: "3px" },
+    { id: "polaris",   name: "Polaris",        org: "Shopify",   category: "E-commerce",  swatches: ["#008060","#D72C0D","#FFC453","#5C6AC4","#47C1BF"], font: "Inter",               radius: "8px" },
+    { id: "fluent",    name: "Fluent UI",      org: "Microsoft", category: "Enterprise",  swatches: ["#0078D4","#D13438","#107C10","#FFB900","#8764B8"], font: "Segoe UI",            radius: "4px" },
+    { id: "antd",      name: "Ant Design",     org: "Ant Group", category: "Enterprise",  swatches: ["#1677FF","#FF4D4F","#52C41A","#FAAD14","#722ED1"], font: "system-ui",           radius: "6px" },
+    { id: "shadcn",    name: "shadcn/ui",      org: "Community", category: "Developer",   swatches: ["#18181B","#F4F4F5","#09090B","#A1A1AA","#E4E4E7"], font: "Inter / Geist",       radius: "8px" },
+    { id: "primer",    name: "Primer",         org: "GitHub",    category: "Developer",   swatches: ["#0969DA","#CF222E","#1A7F37","#BF8700","#8250DF"], font: "system-ui",           radius: "6px" },
+  ];
+  var DS_CATEGORIES = ["All", "Enterprise", "Consumer", "E-commerce", "Developer"];
+  var activeDsFilter = "All";
+
+  function openStyleGuideModal() {
+    var overlay = document.getElementById("sg-overlay");
+    activeDsFilter = "All";
+    renderDsFilters();
+    renderDsGrid();
+    overlay.style.display = "flex";
+  }
+
+  function renderDsFilters() {
+    var container = document.getElementById("ds-filters");
+    container.innerHTML = "";
+    DS_CATEGORIES.forEach(function(cat) {
+      var btn = document.createElement("button");
+      btn.className = "ds-filter-btn" + (activeDsFilter === cat ? " active" : "");
+      btn.textContent = cat;
+      btn.onclick = function() {
+        activeDsFilter = cat;
+        renderDsFilters();
+        renderDsGrid();
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  function renderDsGrid() {
+    var grid = document.getElementById("sg-grid");
+    grid.innerHTML = "";
+    var filtered = activeDsFilter === "All"
+      ? DESIGN_SYSTEMS_UI
+      : DESIGN_SYSTEMS_UI.filter(function(ds) { return ds.category === activeDsFilter; });
+
+    filtered.forEach(function(ds) {
+      var card = document.createElement("div");
+      card.className = "sg-card" + (activeDesignSystem && activeDesignSystem.id === ds.id ? " active" : "");
+      card.onclick = function() { selectDesignSystem(ds); };
+
+      // Swatches
+      var swatchRow = document.createElement("div");
+      swatchRow.className = "ds-swatches";
+      ds.swatches.forEach(function(color) {
+        var dot = document.createElement("div");
+        dot.className = "ds-swatch";
+        dot.style.background = color;
+        swatchRow.appendChild(dot);
+      });
+      card.appendChild(swatchRow);
+
+      // Check mark
+      var check = document.createElement("div");
+      check.className = "sg-active-check";
+      check.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      card.appendChild(check);
+
+      // Name
+      var label = document.createElement("div");
+      label.className = "sg-card-label";
+      label.textContent = ds.name;
+      card.appendChild(label);
+
+      // Org + font
+      var org = document.createElement("div");
+      org.className = "ds-org";
+      org.textContent = ds.org + " \u00B7 " + ds.font;
+      card.appendChild(org);
+
+      // Category badge
+      var badge = document.createElement("span");
+      badge.className = "ds-category-badge";
+      badge.textContent = ds.category;
+      card.appendChild(badge);
+
+      grid.appendChild(card);
+    });
+  }
+
+  function closeStyleGuideModal() {
+    var overlay = document.getElementById("sg-overlay");
+    overlay.classList.add("hiding");
+    setTimeout(function() {
+      overlay.style.display = "none";
+      overlay.classList.remove("hiding");
+    }, 200);
+  }
+
+  function onSgOverlayClick(e) {
+    if (e.target === document.getElementById("sg-overlay")) closeStyleGuideModal();
+  }
+
+  function selectDesignSystem(ds) {
+    activeDesignSystem = ds;
+    closeStyleGuideModal();
+    renderDesignSystemChip();
+    var btn = document.getElementById("style-guide-btn");
+    if (btn) btn.classList.add("sg-btn-active");
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "set-design-system", designSystemId: ds.id }));
+    }
+  }
+
+  function clearDesignSystem() {
+    activeDesignSystem = null;
+    renderDesignSystemChip();
+    var btn = document.getElementById("style-guide-btn");
+    if (btn) btn.classList.remove("sg-btn-active");
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "set-design-system", designSystemId: null }));
+    }
+  }
+
+  function renderDesignSystemChip() {
+    var container = document.getElementById("style-guide-chip-container");
+    if (!activeDesignSystem) {
+      container.innerHTML = "";
+      return;
+    }
+    container.innerHTML = '<div class="style-guide-chip">' +
+      '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="2.5" cy="2.5" r="1.5" fill="currentColor"/><circle cx="7.5" cy="2.5" r="1.5" fill="currentColor"/><circle cx="2.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>' +
+      activeDesignSystem.name + ' <span style="opacity:0.6">' + activeDesignSystem.org + '</span>' +
+      '<span class="style-guide-chip-x" onclick="clearDesignSystem()" title="Remove design system">\u00d7</span>' +
+      '</div>';
+  }
+
+  /* ── File attachments ────────────────────────────────────────────────── */
+  var attachedFiles = [];  // { name, data (base64 or text), type, size }
+
+  function initFileAttach() {
+    var attachBtn = document.getElementById("attach-btn");
+    var fileInput = document.getElementById("file-input");
+    attachBtn.onclick = function() { fileInput.click(); };
+    fileInput.onchange = function() {
+      var files = fileInput.files;
+      for (var i = 0; i < files.length; i++) {
+        readAttachedFile(files[i]);
+      }
+      fileInput.value = "";
+    };
+  }
+
+  function readAttachedFile(file) {
+    var isImage = file.type.startsWith("image/");
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      attachedFiles.push({
+        name: file.name,
+        data: e.target.result,
+        type: file.type,
+        size: file.size,
+        isImage: isImage,
+      });
+      renderAttachedFiles();
+    };
+    if (isImage) {
+      reader.readAsDataURL(file);
+    } else {
+      reader.readAsText(file);
+    }
+  }
+
+  function removeAttachedFile(index) {
+    attachedFiles.splice(index, 1);
+    renderAttachedFiles();
+  }
+
+  function renderAttachedFiles() {
+    var container = document.getElementById("attached-files");
+    if (attachedFiles.length === 0) {
+      container.style.display = "none";
+      container.innerHTML = "";
+      return;
+    }
+    container.style.display = "flex";
+    container.innerHTML = "";
+    attachedFiles.forEach(function(f, i) {
+      var chip = document.createElement("div");
+      chip.className = "file-chip";
+      var icon = f.isImage ? "\ud83d\uddbc" : "\ud83d\udcc4";
+      chip.innerHTML =
+        '<span>' + icon + ' ' + escapeHtml(f.name) + '</span>' +
+        '<span class="file-chip-x" onclick="removeAttachedFile(' + i + ')">\u00d7</span>';
+      container.appendChild(chip);
+    });
+  }
+
+  /* ── Knowledge Sources ───────────────────────────────────────────────── */
+  var ksPanelOpen = false;
+  var ksSources = []; // Array of { id, title, sourceCount, meta }
+  var KS_STORAGE_KEY = "figma-intel-knowledge-sources";
+
+  function toggleKsPanel() {
+    ksPanelOpen = !ksPanelOpen;
+    var panel = document.getElementById("ks-panel");
+    if (ksPanelOpen) {
+      panel.classList.add("open");
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: "list-content" }));
+        // Auto-scan hub when opening on the hub tab
+        if (ksActiveTab === "hub") {
+          ws.send(JSON.stringify({ type: "hub-scan" }));
+        }
+      }
+    } else {
+      panel.classList.remove("open");
+    }
+  }
+
+  function closeKsPanel() {
+    ksPanelOpen = false;
+    var panel = document.getElementById("ks-panel");
+    if (panel) panel.classList.remove("open");
+  }
+
+  var ksActiveTab = "hub";
+
+  function switchKsTab(tab) {
+    ksActiveTab = tab;
+    var tabs = ["hub", "file", "url", "text", "web"];
+    tabs.forEach(function(t) {
+      var tabEl = document.getElementById("ks-tab-" + t);
+      var secEl = document.getElementById("ks-" + t + "-section");
+      if (t === tab) {
+        if (tabEl) { tabEl.style.background = "rgba(255,255,255,0.08)"; tabEl.style.color = "var(--text-primary)"; }
+        if (secEl) secEl.style.display = "block";
+      } else {
+        if (tabEl) { tabEl.style.background = "transparent"; tabEl.style.color = "var(--text-muted)"; }
+        if (secEl) secEl.style.display = "none";
+      }
+    });
+    document.getElementById("ks-error").style.display = "none";
+    // Auto-scan hub when switching to it
+    if (tab === "hub" && ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "hub-scan" }));
+    }
+    // Auto-load reference sites when switching to web tab
+    if (tab === "web" && ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "list-reference-sites" }));
+    }
+  }
+
+  // ── Web Reference Sites ──
+  var webReferenceSites = [];
+
+  function addReferenceSite() {
+    var nameInput = document.getElementById("ks-web-name");
+    var urlInput = document.getElementById("ks-web-url");
+    var name = (nameInput.value || "").trim();
+    var url = (urlInput.value || "").trim();
+    if (!url) return;
+    // Auto-generate name from domain if not provided
+    if (!name) {
+      try { name = new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, ""); } catch(e) { name = url; }
+    }
+    // Ensure URL has protocol
+    var baseUrl = url.startsWith("http") ? url : "https://" + url;
+    var searchDomain = url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "add-reference-site", name: name, baseUrl: baseUrl, searchDomain: searchDomain }));
+    }
+    nameInput.value = "";
+    urlInput.value = "";
+  }
+
+  function removeRefSite(id) {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "remove-reference-site", id: id }));
+    }
+  }
+
+  function renderWebRefList(sites) {
+    webReferenceSites = sites || [];
+    var container = document.getElementById("ks-web-list");
+    if (!container) return;
+    if (webReferenceSites.length === 0) {
+      container.innerHTML = '<div style="font-size:10.5px;color:var(--text-ghost);padding:8px 0">No reference sites configured. Add a site above to enable web search in chat mode.</div>';
+      return;
+    }
+    container.innerHTML = webReferenceSites.map(function(site) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;margin-bottom:4px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:11px;font-weight:500;color:var(--text-primary)">' + escapeHtml(site.name) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-ghost)">' + escapeHtml(site.searchDomain) + '</div>' +
+        '</div>' +
+        '<button onclick="removeRefSite(\'' + site.id + '\')" style="background:none;border:none;color:var(--text-ghost);cursor:pointer;padding:2px 4px;font-size:12px" title="Remove">&times;</button>' +
+      '</div>';
+    }).join("");
+  }
+
+  // ── Knowledge Hub ──
+  var hubCatalog = [];
+  var hubLoadedFiles = new Set(); // fileNames currently loaded as sources
+
+  function renderHubCatalog(files) {
+    hubCatalog = files || [];
+    var list = document.getElementById("ks-hub-list");
+    if (!list) return;
+
+    if (hubCatalog.length === 0) {
+      list.innerHTML = '<div class="ks-empty" style="padding:8px 0">' +
+        'No files in the knowledge hub yet.<br>' +
+        '<span style="font-size:9px;color:var(--text-ghost)">Add PDFs, DOCX, or TXT files to:<br>figma-bridge-plugin/knowledge-hub/</span>' +
+      '</div>';
+      return;
+    }
+
+    var html = "";
+    hubCatalog.forEach(function(f) {
+      var icon = "\ud83d\udcc4"; // 📄
+      if (f.fileType === "pdf") icon = "\ud83d\udcc4";
+      else if (f.fileType === "docx" || f.fileType === "doc") icon = "\ud83d\uddd2";
+      else if (f.fileType === "md") icon = "\ud83d\udcdd";
+      else if (f.fileType === "txt") icon = "\ud83d\udcc3";
+
+      var isLoaded = hubLoadedFiles.has(f.fileName);
+      var sizeStr = f.sizeBytes >= 1048576 ? (f.sizeBytes / 1048576).toFixed(1) + " MB"
+        : f.sizeBytes >= 1024 ? (f.sizeBytes / 1024).toFixed(0) + " KB"
+        : f.sizeBytes + " B";
+      var metaParts = [f.fileType.toUpperCase(), sizeStr];
+      if (f.charCount) metaParts.push(formatCharCount(f.charCount));
+
+      html += '<div class="ks-hub-item' + (isLoaded ? "" : "") + '" onclick="loadHubFile(\'' + escapeHtml(f.fileName).replace(/'/g, "\\'") + '\')" id="hub-' + escapeHtml(f.fileName).replace(/[^a-zA-Z0-9]/g, "_") + '">' +
+        '<span class="ks-hub-icon">' + icon + '</span>' +
+        '<div class="ks-hub-info">' +
+          '<div class="ks-hub-name">' + escapeHtml(f.title) + '</div>' +
+          '<div class="ks-hub-meta">' + metaParts.join(" \u00b7 ") + '</div>' +
+        '</div>' +
+        (isLoaded ? '<span class="ks-hub-loaded">Active</span>' : '') +
+      '</div>';
+    });
+    list.innerHTML = html;
+  }
+
+  function loadHubFile(fileName) {
+    if (hubLoadedFiles.has(fileName)) return; // already loaded
+    var itemId = "hub-" + fileName.replace(/[^a-zA-Z0-9]/g, "_");
+    var el = document.getElementById(itemId);
+    if (el) el.classList.add("loading");
+
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "hub-load", fileName: fileName }));
+    }
+  }
+
+  function updateHubLoadedState() {
+    // Mark which hub files are currently active as knowledge sources
+    hubLoadedFiles.clear();
+    ksSources.forEach(function(s) {
+      if (s.meta && s.meta.hubFile && s.meta.fileName) {
+        hubLoadedFiles.add(s.meta.fileName);
+      }
+    });
+    // Re-render if hub tab is active
+    if (ksActiveTab === "hub" && hubCatalog.length > 0) {
+      renderHubCatalog(hubCatalog);
+    }
+  }
+
+  // ── File Upload ──
+  document.addEventListener("DOMContentLoaded", function() {
+    var fileInput = document.getElementById("ks-file-input");
+    if (fileInput) {
+      fileInput.addEventListener("change", function() {
+        var file = fileInput.files[0];
+        if (!file) return;
+        var errEl = document.getElementById("ks-error");
+        errEl.style.display = "none";
+        var nameEl = document.getElementById("ks-file-name");
+        nameEl.textContent = "Reading: " + file.name + "...";
+        nameEl.style.display = "block";
+        var btn = document.getElementById("ks-file-btn");
+        btn.disabled = true;
+        btn.textContent = "Uploading...";
+
+        // Read as base64 DataURL (works for binary PDFs/DOCX)
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          if (ws && ws.readyState === 1) {
+            nameEl.textContent = "\u23f3 Extracting text from: " + file.name + "...";
+            btn.textContent = "Processing...";
+            ws.send(JSON.stringify({
+              type: "add-content-file",
+              name: file.name,
+              data: e.target.result, // base64 DataURL
+              fileType: file.type,
+            }));
+          }
+          // Fallback timeout in case relay never responds
+          setTimeout(function() {
+            if (btn.disabled) {
+              btn.disabled = false;
+              btn.textContent = "Choose PDF, DOCX, TXT, or MD file...";
+              nameEl.style.display = "none";
+            }
+          }, 30000);
+        };
+        reader.onerror = function() {
+          errEl.textContent = "Failed to read file";
+          errEl.style.display = "block";
+          btn.disabled = false;
+          btn.textContent = "Choose PDF, DOCX, TXT, or MD file...";
+          nameEl.style.display = "none";
+        };
+        reader.readAsDataURL(file);
+        fileInput.value = "";
+      });
+    }
+  });
+
+  // ── URL Add ──
+  function addKsUrl() {
+    var input = document.getElementById("ks-url-input");
+    var url = (input.value || "").trim();
+    if (!url) return;
+    var errEl = document.getElementById("ks-error");
+    errEl.style.display = "none";
+
+    if (!/^https?:\/\//i.test(url)) {
+      errEl.textContent = "Enter a valid URL starting with http:// or https://";
+      errEl.style.display = "block";
+      return;
+    }
+
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "add-content-url", url: url }));
+      input.value = "";
+      var btn = document.getElementById("ks-url-btn");
+      btn.disabled = true;
+      btn.textContent = "Fetching...";
+      setTimeout(function() { btn.disabled = false; btn.textContent = "Add"; }, 15000);
+    }
+  }
+
+  // ── Text Paste ──
+  function addKsText() {
+    var titleInput = document.getElementById("ks-paste-title");
+    var contentInput = document.getElementById("ks-paste-content");
+    var title = (titleInput.value || "").trim();
+    var content = (contentInput.value || "").trim();
+    var errEl = document.getElementById("ks-error");
+
+    if (!content) {
+      errEl.textContent = "Paste some content to use as a knowledge source.";
+      errEl.style.display = "block";
+      return;
+    }
+
+    errEl.style.display = "none";
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "add-content-text", title: title || "Pasted Content", content: content }));
+      titleInput.value = "";
+      contentInput.value = "";
+      var btn = document.getElementById("ks-paste-btn");
+      btn.disabled = true;
+      btn.textContent = "Adding...";
+      setTimeout(function() { btn.disabled = false; btn.textContent = "Add Content"; }, 5000);
+    }
+  }
+
+  function removeKsSource(id) {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "remove-content", sourceId: id }));
+    }
+    ksSources = ksSources.filter(function(s) { return s.id !== id; });
+    renderKsList();
+    updateKsBadge();
+    updateHubLoadedState();
+  }
+
+  function ksTypeIcon(meta) {
+    if (!meta) return "\ud83d\udcc4"; // 📄
+    var t = meta.fileType || "";
+    if (t === "pdf") return "\ud83d\udcc4"; // 📄
+    if (t === "docx" || t === "doc") return "\ud83d\uddd2"; // 🗒
+    if (t === "url") return "\ud83c\udf10"; // 🌐
+    if (t === "text") return "\ud83d\udcdd"; // 📝
+    return "\ud83d\udcc4"; // 📄
+  }
+
+  function toggleKsPreview(id) {
+    var card = document.getElementById("ksc-" + id);
+    if (card) card.classList.toggle("expanded");
+  }
+
+  function formatCharCount(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M chars";
+    if (n >= 1000) return (n / 1000).toFixed(1) + "K chars";
+    return n + " chars";
+  }
+
+  function renderKsList() {
+    var list = document.getElementById("ks-list");
+    if (!list) return;
+    if (ksSources.length === 0) {
+      list.innerHTML = '<div class="ks-empty">No sources added. Upload a file, paste a URL, or paste text.</div>';
+      return;
+    }
+    var html = "";
+    ksSources.forEach(function(s) {
+      var icon = ksTypeIcon(s.meta);
+      var metaParts = [];
+      if (s.meta) {
+        if (s.meta.fileType === "pdf") metaParts.push("PDF");
+        else if (s.meta.fileType === "docx" || s.meta.fileType === "doc") metaParts.push("DOCX");
+        else if (s.meta.fileType === "url") metaParts.push("Web page");
+        else if (s.meta.fileType === "text") metaParts.push("Pasted text");
+        else if (s.meta.fileType) metaParts.push(s.meta.fileType.toUpperCase());
+        if (s.meta.pages) metaParts.push(s.meta.pages + " pages");
+      }
+      if (s.charCount) metaParts.push(formatCharCount(s.charCount));
+      metaParts.push("Ready");
+      var metaStr = metaParts.join(" \u00b7 ");
+
+      var previewHtml = "";
+      if (s.preview) {
+        previewHtml =
+          '<span class="ks-card-toggle" onclick="event.stopPropagation();toggleKsPreview(\'' + s.id + '\')">\u25b6 preview</span>' +
+          '<div class="ks-card-preview">' + escapeHtml(s.preview) + (s.charCount > 500 ? "..." : "") + '</div>';
+      }
+
+      html += '<div class="ks-card" id="ksc-' + s.id + '" onclick="toggleKsPreview(\'' + s.id + '\')" style="cursor:pointer;flex-direction:column;align-items:stretch">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between">' +
+          '<div style="display:flex;align-items:center;gap:6px;min-width:0">' +
+            '<span style="font-size:16px;flex-shrink:0">' + icon + '</span>' +
+            '<div class="ks-card-info">' +
+              '<div class="ks-card-title">' + escapeHtml(s.title) + '</div>' +
+              '<div class="ks-card-meta">' + metaStr + previewHtml + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button class="ks-card-remove" onclick="event.stopPropagation();removeKsSource(\'' + s.id + '\')" title="Remove">\u00d7</button>' +
+        '</div>' +
+      '</div>';
+    });
+    list.innerHTML = html;
+  }
+
+  function updateKsBadge() {
+    var badge = document.getElementById("ks-badge");
+    var btn = document.getElementById("ks-btn");
+    if (ksSources.length > 0) {
+      badge.textContent = ksSources.length;
+      badge.style.display = "flex";
+      if (btn) btn.style.color = "var(--accent)";
+    } else {
+      badge.style.display = "none";
+      if (btn) btn.style.color = "";
+    }
+  }
+
+  function resetKsButtons() {
+    var b1 = document.getElementById("ks-url-btn");
+    if (b1) { b1.disabled = false; b1.textContent = "Add"; }
+    var b2 = document.getElementById("ks-paste-btn");
+    if (b2) { b2.disabled = false; b2.textContent = "Add Content"; }
+    var b3 = document.getElementById("ks-file-btn");
+    if (b3) { b3.disabled = false; b3.textContent = "Choose PDF, DOCX, TXT, or MD file..."; }
+    var fn = document.getElementById("ks-file-name");
+    if (fn) fn.style.display = "none";
+  }
+
+  function showKsSuccess(text) {
+    var el = document.getElementById("ks-success");
+    if (el) {
+      el.textContent = text;
+      el.style.display = "block";
+      setTimeout(function() { el.style.display = "none"; }, 4000);
+    }
+  }
+
+  function handleKsMessage(msg) {
+    if (msg.type === "content-added") {
+      var s = msg.source;
+      var exists = ksSources.some(function(x) { return x.id === s.id; });
+      if (!exists) ksSources.push(s);
+      else ksSources = ksSources.map(function(x) { return x.id === s.id ? s : x; });
+      renderKsList();
+      updateKsBadge();
+      updateHubLoadedState();
+      resetKsButtons();
+      var errEl = document.getElementById("ks-error");
+      if (errEl) errEl.style.display = "none";
+      // Show clear success feedback
+      var metaStr = "";
+      if (s.meta && s.meta.fileType === "pdf" && s.meta.pages) metaStr = " (" + s.meta.pages + " pages)";
+      else if (s.meta && s.meta.fileType === "url") metaStr = " (web page)";
+      showKsSuccess("\u2705 Added: \"" + s.title + "\"" + metaStr + " \u2014 AI can now answer from this source");
+    }
+    if (msg.type === "content-removed") {
+      ksSources = ksSources.filter(function(x) { return x.id !== msg.sourceId; });
+      renderKsList();
+      updateKsBadge();
+    }
+    if (msg.type === "content-error") {
+      var errEl = document.getElementById("ks-error");
+      if (errEl) {
+        errEl.textContent = msg.error || "Failed to process content";
+        errEl.style.display = "block";
+      }
+      var sucEl = document.getElementById("ks-success");
+      if (sucEl) sucEl.style.display = "none";
+      resetKsButtons();
+    }
+    if (msg.type === "content-list") {
+      ksSources = msg.sources || [];
+      renderKsList();
+      updateKsBadge();
+    }
+  }
+
+  // Enter key in URL input
+  document.addEventListener("DOMContentLoaded", function() {
+    var urlInput = document.getElementById("ks-url-input");
+    if (urlInput) {
+      urlInput.addEventListener("keydown", function(e) {
+        if (e.key === "Enter") { e.preventDefault(); addKsUrl(); }
+      });
+    }
+  });
+
+  // Close panel when clicking outside
+  document.addEventListener("click", function(e) {
+    if (!ksPanelOpen) return;
+    var panel = document.getElementById("ks-panel");
+    var btn = document.getElementById("ks-btn");
+    var wrap = btn ? btn.parentElement : null;
+    if (panel && !panel.contains(e.target) && wrap && !wrap.contains(e.target)) {
+      closeKsPanel();
+    }
+  });
+
+  /* ── Provider / Login Screen ─────────────────────────────────────────── */
+  var selectedLoginProvider = null;
+  var loginApiKey = null;
+  var loginDismissed = false;
+  var geminiCliLoggedIn = false; // set from bridge-status message
+
+  var PROVIDER_META = {
+    claude:  { label: "Claude",  dotClass: "claude",  btnText: "Continue with Claude" },
+    openai:  { label: "OpenAI",  dotClass: "openai",  btnText: "Continue with OpenAI" },
+    gemini:  { label: "Gemini",  dotClass: "gemini",  btnText: "Continue with Gemini" },
+    bridge:  { label: "Bridge",  dotClass: "bridge",  btnText: "Activate Bridge Mode" },
+    perplexity: { label: "Perplexity", dotClass: "perplexity", btnText: "Continue with Perplexity" },
+    stitch:     { label: "Stitch",     dotClass: "stitch",     btnText: "Continue with Stitch" },
+  };
+
+  var PROVIDER_HINTS = {
+    claude:  'Uses your Claude Code subscription. Setup prepares it up front so switching does not require restarting the relay.',
+    openai:  'Uses the OpenAI account currently signed in to Codex. Setup also registers Codex for MCP so switching stays restart-free.',
+    gemini:  '',
+    bridge:  'Your AI tool (VS Code Copilot, Cursor, etc.) controls Figma via MCP.',
+    perplexity: 'Uses your Perplexity API key for research-focused conversations. Get a key at perplexity.ai/settings.',
+    stitch: 'Uses Google Stitch to generate UI screens from prompts. Requires an OAuth2 access token — run: npx @anthropic-ai/stitch-auth or get one at stitch.withgoogle.com → Settings.',
+  };
+
+  var PROVIDER_API_LINKS = {
+    openai: "Get key at platform.openai.com",
+    gemini: "Get key at aistudio.google.com",
+    perplexity: "Get key at perplexity.ai/settings",
+    stitch: "Get token at stitch.withgoogle.com",
+  };
+
+  function geminiNeedsApiKey() {
+    // API key is only required when the Gemini CLI is not authenticated
+    return !geminiCliLoggedIn;
+  }
+
+  function selectLoginProvider(id) {
+    selectedLoginProvider = id;
+    ["claude","openai","gemini","perplexity","stitch","bridge"].forEach(function(p) {
+      var card = document.getElementById("pc-" + p);
+      if (card) card.className = "provider-card" + (p === id ? " selected" : "");
+    });
+
+    var apiExpand      = document.getElementById("login-api-expand");
+    var bridgeExpand   = document.getElementById("login-bridge-expand");
+    var projectExpand  = document.getElementById("login-project-expand");
+    var stitchAuthDiv  = document.getElementById("login-stitch-auth");
+    var apiInput       = document.getElementById("login-api-key");
+
+    // Hide stitch auth div by default (shown only for stitch)
+    if (stitchAuthDiv) stitchAuthDiv.style.display = "none";
+    var apiLink        = document.getElementById("login-api-link");
+
+    if (id === "gemini" && geminiNeedsApiKey()) {
+      apiExpand.style.display = "block";
+      bridgeExpand.style.display = "none";
+      if (projectExpand) projectExpand.style.display = "none";
+      apiInput.placeholder = "AIza\u2026 (Google AI Studio key)";
+      if (apiLink) apiLink.textContent = PROVIDER_API_LINKS[id] || "";
+    } else if (id === "perplexity") {
+      apiExpand.style.display = "block";
+      bridgeExpand.style.display = "none";
+      if (projectExpand) projectExpand.style.display = "none";
+      apiInput.placeholder = "pplx-\u2026 (Perplexity API key)";
+      if (apiLink) apiLink.textContent = PROVIDER_API_LINKS[id] || "";
+    } else if (id === "stitch") {
+      apiExpand.style.display = "none";
+      bridgeExpand.style.display = "none";
+      if (projectExpand) projectExpand.style.display = "block";
+      // Show Google Sign-In button instead of API key field
+      var stitchAuthDiv = document.getElementById("login-stitch-auth");
+      if (stitchAuthDiv) stitchAuthDiv.style.display = "block";
+    } else if (id === "bridge") {
+      apiExpand.style.display = "none";
+      bridgeExpand.style.display = "block";
+      if (projectExpand) projectExpand.style.display = "none";
+    } else {
+      apiExpand.style.display = "none";
+      bridgeExpand.style.display = "none";
+      if (projectExpand) projectExpand.style.display = "none";
+    }
+
+    var hint = document.getElementById("login-hint");
+    if (hint) hint.textContent = PROVIDER_HINTS[id] || "";
+
+    updateLoginContinue();
+  }
+
+  function updateLoginContinue() {
+    var btn = document.getElementById("login-continue-btn");
+    if (!btn) return;
+    if (!selectedLoginProvider) { btn.disabled = true; return; }
+
+    var needsKey = (selectedLoginProvider === "gemini" && geminiNeedsApiKey()) || selectedLoginProvider === "perplexity";
+    var keyVal   = needsKey ? (document.getElementById("login-api-key").value || "").trim() : "";
+    // Stitch: enabled when Google OAuth is done
+    if (selectedLoginProvider === "stitch") {
+      btn.disabled = !stitchGoogleAuthed;
+    } else {
+      btn.disabled = needsKey && keyVal.length < 8;
+    }
+
+    var meta = PROVIDER_META[selectedLoginProvider];
+    if (meta) btn.textContent = meta.btnText;
+  }
+
+  var loginProjectId = null;
+  var stitchGoogleAuthed = false;
+
+  function startStitchGoogleAuth() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    var statusEl = document.getElementById("stitch-auth-status");
+    var btn = document.getElementById("stitch-google-signin-btn");
+    if (statusEl) statusEl.textContent = "Opening Google sign-in...";
+    if (btn) { btn.disabled = true; btn.style.opacity = "0.6"; }
+    ws.send(JSON.stringify({ type: "stitch-auth" }));
+  }
+
+  function continueWithProvider() {
+    if (!selectedLoginProvider) return;
+    var needsKey = (selectedLoginProvider === "gemini" && geminiNeedsApiKey()) || selectedLoginProvider === "perplexity";
+    // Stitch uses Google OAuth — no manual key needed
+    loginApiKey = needsKey ? (document.getElementById("login-api-key").value || "").trim() : null;
+    loginProjectId = selectedLoginProvider === "stitch" ? (document.getElementById("login-project-id").value || "").trim() : null;
+
+    try {
+      localStorage.setItem("figma-intelligence-provider", selectedLoginProvider);
+      // Persist a flag if an API key was provided, so we can skip login screen on reload
+      if (loginApiKey) {
+        localStorage.setItem("figma-intelligence-has-key", "1");
+      }
+    } catch(e) {}
+
+    hideLoginScreen();
+    updateProviderBadge();
+    updateModeTabsVisibility();
+    // Force chat mode for Perplexity (research-only, no Code mode)
+    if (selectedLoginProvider === "perplexity" && activeMode !== "chat") {
+      switchMode("chat");
+    }
+    // Force code mode for Stitch (UI generation, not chat)
+    if (selectedLoginProvider === "stitch" && activeMode === "chat") {
+      switchMode("code");
+    }
+    // Set Perplexity-specific placeholder
+    if (selectedLoginProvider === "perplexity" && input) {
+      input.placeholder = "Research any topic...";
+    }
+    // Set Stitch-specific placeholder
+    if (selectedLoginProvider === "stitch" && input) {
+      input.placeholder = "Describe the UI screen to generate...";
+    }
+    renderThreadForProvider(selectedLoginProvider);
+    updateStatus();
+
+    if (ws && ws.readyState === WebSocket.OPEN) sendProviderToRelay();
+  }
+
+  function sendProviderToRelay() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: "set-provider",
+      provider: selectedLoginProvider,
+      apiKey: loginApiKey || null,
+      projectId: loginProjectId || null,
+    }));
+  }
+
+  function hideLoginScreen() {
+    var screen = document.getElementById("login-screen");
+    if (!screen) return;
+    loginDismissed = true;
+    screen.classList.add("hiding");
+    setTimeout(function() { screen.style.display = "none"; }, 260);
+  }
+
+  function showLoginScreen() {
+    var screen = document.getElementById("login-screen");
+    if (!screen) return;
+    loginDismissed = false;
+    screen.style.display = "flex";
+    screen.classList.remove("hiding");
+    if (selectedLoginProvider) selectLoginProvider(selectedLoginProvider);
+  }
+
+  function updateProviderBadge() {
+    var badge = document.getElementById("provider-badge");
+    if (!badge || !selectedLoginProvider) return;
+    var meta = PROVIDER_META[selectedLoginProvider];
+    badge.style.display = "flex";
+    badge.innerHTML =
+      '<div class="prov-dot ' + meta.dotClass + '"></div>' +
+      '<span>' + meta.label + '</span>';
+    syncModelBadge();
+  }
+
+  function initLoginScreen() {
+    var saved = null;
+    var hasKey = false;
+    try {
+      saved = localStorage.getItem("figma-intelligence-provider");
+      hasKey = localStorage.getItem("figma-intelligence-has-key") === "1";
+    } catch(e) {}
+
+    if (saved && PROVIDER_META[saved]) {
+      selectedLoginProvider = saved;
+      selectLoginProvider(saved);
+      // Skip login screen when:
+      // - Subscription providers (Claude, OpenAI, Bridge)
+      // - Gemini with CLI auth
+      // - API-key providers (Stitch, Perplexity) with a previously stored key
+      var isApiKeyProvider = saved === "stitch" || saved === "perplexity" || (saved === "gemini" && !geminiCliLoggedIn);
+      if (saved === "claude" || saved === "openai" || saved === "bridge" || (saved === "gemini" && geminiCliLoggedIn) || (isApiKeyProvider && hasKey)) {
+        hideLoginScreen();
+        updateProviderBadge();
+        if (saved === "stitch" && activeMode === "chat") switchMode("code");
+        if (saved === "perplexity" && activeMode !== "chat") switchMode("chat");
+        if (saved === "stitch" && input) input.placeholder = "Describe the UI screen to generate...";
+        if (saved === "perplexity" && input) input.placeholder = "Research any topic...";
+      } else {
+        showLoginScreen();
+      }
+    } else {
+      // First run — show login screen, default select Claude
+      selectLoginProvider("claude");
+      showLoginScreen();
+    }
+    syncModelBadge();
+    updateModeTabsVisibility();
+    renderThreadForProvider(selectedLoginProvider || "claude");
+
+    // Apply chat mode UI if restored
+    if (activeMode === "chat") {
+      var dsBtn = document.getElementById("style-guide-btn");
+      if (dsBtn) dsBtn.style.display = "none";
+      if (input) input.placeholder = "Ask me anything...";
+    }
+  }
+
+  function isBridgeMode() {
+    return selectedLoginProvider === "bridge";
+  }
+
+  /* ── Mode tabs (Chat / Code / Design+Code) ────────────────────────────── */
+  var activeMode = "code";
+  var MODE_STORAGE_KEY = "figma-intelligence-mode";
+  try {
+    var savedMode = localStorage.getItem(MODE_STORAGE_KEY);
+    if (savedMode === "chat" || savedMode === "code" || savedMode === "dual") activeMode = savedMode;
+  } catch(e) {}
+
+  // Apply initial tab state
+  (function() {
+    var codeTab = document.getElementById("mode-tab-code");
+    var chatTab = document.getElementById("mode-tab-chat");
+    var dualTab = document.getElementById("mode-tab-dual");
+    if (codeTab) codeTab.className = "mode-tab" + (activeMode === "code" ? " active" : "");
+    if (chatTab) chatTab.className = "mode-tab" + (activeMode === "chat" ? " active" : "");
+    if (dualTab) dualTab.className = "mode-tab" + (activeMode === "dual" ? " active" : "");
+  })();
+
+  window.switchMode = function(mode) {
+    if (mode === activeMode) return;
+    if (isStreaming) return; // prevent switching mid-stream
+
+    activeMode = mode;
+    try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch(e) {}
+
+    // Update tab UI
+    document.getElementById("mode-tab-code").className = "mode-tab" + (mode === "code" ? " active" : "");
+    document.getElementById("mode-tab-chat").className = "mode-tab" + (mode === "chat" ? " active" : "");
+    document.getElementById("mode-tab-dual").className = "mode-tab" + (mode === "dual" ? " active" : "");
+
+    // Swap home state template based on mode
+    homeStateTemplate = mode === "chat" ? chatHomeTemplate : codeHomeTemplate;
+
+    // Re-render thread for current provider + new mode
+    renderThreadForProvider(getActiveProvider());
+
+    // Update placeholder text
+    if (input) {
+      if (selectedLoginProvider === "perplexity") {
+        input.placeholder = "Research any topic...";
+      } else if (mode === "chat") {
+        input.placeholder = "Ask me anything...";
+      } else if (mode === "dual") {
+        input.placeholder = "Describe a component — generates design + code...";
+      } else {
+        input.placeholder = "How can I help you today?";
+      }
+    }
+
+    // Hide design-system picker in chat mode
+    var dsBtn = document.getElementById("style-guide-btn");
+    if (dsBtn) dsBtn.style.display = (mode === "chat") ? "none" : "";
+
+    // Show VS Code connection indicator for dual mode
+    updateVscodeStatus();
+  };
+
+  function isChatOnlyProvider() {
+    return selectedLoginProvider === "bridge" || selectedLoginProvider === "perplexity";
+  }
+
+  function isSingleModeProvider() {
+    return isChatOnlyProvider() || selectedLoginProvider === "stitch";
+  }
+
+  function updateModeTabsVisibility() {
+    var modeTabs = document.getElementById("mode-tabs");
+    if (modeTabs) modeTabs.style.display = isSingleModeProvider() ? "none" : "flex";
+    // Hide dual tab for providers that don't support it
+    var dualTab = document.getElementById("mode-tab-dual");
+    if (dualTab) dualTab.style.display = isSingleModeProvider() ? "none" : "";
+  }
+
+  // VS Code connection status for dual mode
+  var isVscodeConnected = false;
+  var hasFastChat = false;
+
+  function updateFastChatIndicator() {
+    var chatTab = document.getElementById("mode-tab-chat");
+    if (!chatTab) return;
+    var svg = chatTab.querySelector("svg");
+    var isFast = hasFastChat || webReferenceSites.length > 0 || ksSources.length > 0;
+    // Update text after the SVG
+    var nodes = chatTab.childNodes;
+    for (var ni = 0; ni < nodes.length; ni++) {
+      if (nodes[ni].nodeType === 3 && nodes[ni].textContent.trim()) {
+        nodes[ni].textContent = isFast ? "\n      \u26a1 Chat\n    " : "\n      Chat\n    ";
+        break;
+      }
+    }
+  }
+
+  function updateVscodeStatus() {
+    var strip = document.getElementById("vscode-status");
+    if (!strip) return;
+    if (activeMode === "dual") {
+      strip.style.display = "";
+      strip.textContent = isVscodeConnected
+        ? "VS Code connected — code files will be written to workspace"
+        : "VS Code extension not connected — code will appear in chat only";
+      strip.className = "auth-strip" + (isVscodeConnected ? " ok" : "");
+    } else {
+      strip.style.display = "none";
+    }
+  }
+
+  /* ── State ────────────────────────────────────────────────────────────── */
+  var ws = null;
+  var reconnectTimer = null;
+  var isPluginConnected = false;
+  var isMcpConnected = false;
+  var isClaudeLoggedIn = false;
+  var claudeEmail = null;
+  var isOpenAILoggedIn = false;
+  var openaiEmail = null;
+  var isStreaming = false;
+  var currentRequestId = null;
+  var currentRequestProvider = null;
+  var currentAssistantRawText = "";
+  var THREAD_STORAGE_KEY = "figma-intelligence-threads-v1";
+  var MAX_CONVERSATION_MESSAGES = 12;
+  var chatThreads = loadChatThreads();
+
+  // Current assistant message being built
+  var currentMsgEl = null;
+  var currentTextEl = null;
+  var currentActivityEl = null;
+  var currentToolStepsEl = null;
+  var currentToolPills = {};
+  var currentToolsUsed = []; // ordered list of tools called this turn
+  var pendingCitations = null; // Perplexity source URLs
+
+  /* ── UI refs ──────────────────────────────────────────────────────────── */
+  var thread = document.getElementById("thread");
+  var homeState = document.getElementById("home-state");
+  var input = document.getElementById("input");
+  var sendBtn = document.getElementById("send-btn");
+  var connDot = document.getElementById("conn-dot");
+  var connText = document.getElementById("conn-text");
+  var authStrip = document.getElementById("auth-strip");
+  var authText = document.getElementById("auth-text");
+  var footer = document.getElementById("input-footer");
+  var codeHomeTemplate = document.getElementById("home-state").outerHTML;
+  var chatHomeTemplate = document.getElementById("chat-home").outerHTML.replace('id="chat-home"', 'id="home-state"').replace('style="display:none"', '');
+  var homeStateTemplate = activeMode === "chat" ? chatHomeTemplate : codeHomeTemplate;
+  var bridgeHomeTemplate = document.getElementById("bridge-home").outerHTML;
+  // Remove the hidden chat-home div from the DOM (it was only needed for template capture)
+  var chatHomeEl = document.getElementById("chat-home");
+  if (chatHomeEl) chatHomeEl.parentNode.removeChild(chatHomeEl);
+
+  function loadChatThreads() {
+    var defaults = {
+      claude_code: [], claude_chat: [],
+      openai_code: [], openai_chat: [],
+      gemini_code: [], gemini_chat: [],
+      perplexity_chat: [],
+      bridge: []
+    };
+    try {
+      var raw = localStorage.getItem(THREAD_STORAGE_KEY);
+      if (!raw) return defaults;
+      var parsed = JSON.parse(raw);
+
+      // Migrate old format: { claude: [], openai: [], gemini: [] } → { claude_code: [], ... }
+      var oldProviders = ["claude", "openai", "gemini"];
+      oldProviders.forEach(function(p) {
+        if (Array.isArray(parsed[p]) && parsed[p].length > 0 && !parsed[p + "_code"]) {
+          parsed[p + "_code"] = parsed[p];
+        }
+        delete parsed[p];
+      });
+
+      Object.keys(defaults).forEach(function(key) {
+        if (!Array.isArray(parsed[key])) parsed[key] = [];
+      });
+      return parsed;
+    } catch (e) {
+      return defaults;
+    }
+  }
+
+  function saveChatThreads() {
+    try {
+      localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(chatThreads));
+    } catch (e) {}
+  }
+
+  function getThreadKey(provider) {
+    var p = provider || getActiveProvider();
+    if (p === "bridge") return "bridge";
+    if (p === "perplexity") return "perplexity_chat";
+    return p + "_" + activeMode;
+  }
+
+  function getThreadEntries(provider) {
+    var key = getThreadKey(provider);
+    if (!Array.isArray(chatThreads[key])) chatThreads[key] = [];
+    return chatThreads[key];
+  }
+
+  function pushThreadEntry(provider, entry) {
+    getThreadEntries(provider).push(entry);
+    saveChatThreads();
+  }
+
+  /* ── Connection status ────────────────────────────────────────────────── */
+  function updateStatus() {
+    var bridge   = isBridgeMode();
+    var prov     = selectedLoginProvider || "claude";
+    var online   = isPluginConnected && isMcpConnected;
+
+    connDot.className = "conn-dot" + (isPluginConnected ? (online ? " online" : " offline") : "");
+
+    if (bridge) {
+      connText.textContent = !isPluginConnected ? "Offline" : (isMcpConnected ? "Tool connected" : "Bridge active");
+    } else {
+      connText.textContent = !isPluginConnected ? "Offline" : (isMcpConnected ? "Connected" : "Relay only");
+    }
+
+    // Auth strip
+    if (!isPluginConnected) {
+      authStrip.className = "auth-strip";
+      authText.innerHTML = 'Bridge offline &mdash; run <code style="color:rgba(218,119,86,0.8);font-size:10px">bash setup.sh</code> to restart';
+    } else if (bridge) {
+      authStrip.className = "auth-strip ok";
+      authText.innerHTML = '&#10003; MCP bridge active &middot; <span style="color:rgba(160,132,232,0.8)">ws://localhost:9001</span>';
+    } else if (prov === "openai") {
+      authStrip.className = isOpenAILoggedIn ? "auth-strip ok" : "auth-strip";
+      authText.innerHTML = isOpenAILoggedIn
+        ? '&#10003; OpenAI Codex subscription active' +
+          (openaiEmail ? ' &middot; <span class="auth-email">' + openaiEmail + '</span>' : '')
+        : '<span style="color:rgba(218,119,86,0.75)">Run <code style="font-size:10px">codex login</code> to use your current Codex account. No relay restart needed after login.</span>';
+    } else if (prov === "gemini") {
+      var geminiReady = geminiCliLoggedIn || !!loginApiKey;
+      authStrip.className = geminiReady ? "auth-strip ok" : "auth-strip";
+      authText.innerHTML = geminiCliLoggedIn
+        ? '&#10003; Gemini subscription active &middot; Google One AI Premium'
+        : loginApiKey
+          ? '&#10003; Gemini connected &middot; API key'
+          : '<span style="color:rgba(218,119,86,0.75)">Gemini not configured &mdash; <span style="cursor:pointer;text-decoration:underline" onclick="showLoginScreen()">set up subscription or API key</span></span>';
+    } else if (isClaudeLoggedIn) {
+      authStrip.className = "auth-strip ok";
+      authText.innerHTML = '&#10003; Claude subscription active' +
+        (claudeEmail ? ' &middot; <span class="auth-email">' + claudeEmail + '</span>' : '');
+    } else {
+      authStrip.className = "auth-strip";
+      authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Run <code style="font-size:10px">claude login</code> to authenticate. No relay restart needed after login.</span>';
+    }
+
+    // Show bridge home / normal home
+    var bridgeHomeEl = document.getElementById("bridge-home");
+    if (bridgeHomeEl) bridgeHomeEl.style.display = bridge ? "" : "none";
+    if (homeState) homeState.style.display = bridge ? "none" : "";
+
+    // Input area visibility
+    var inputAreaEl = document.querySelector(".input-area");
+    if (inputAreaEl) inputAreaEl.style.display = bridge ? "none" : "";
+
+    // Can we chat?
+    var canChat;
+    if (!isPluginConnected || isStreaming || bridge) {
+      canChat = false;
+    } else if (prov === "openai") {
+      canChat = isOpenAILoggedIn;
+    } else if (prov === "gemini") {
+      canChat = geminiCliLoggedIn || !!loginApiKey;
+    } else {
+      canChat = isClaudeLoggedIn;
+    }
+
+    input.disabled = !canChat;
+    updateSend();
+    footer.textContent = "copyright ramsarjal";
+  }
+
+  function updateSend() {
+    var prov = selectedLoginProvider || "claude";
+    var hasAuth;
+    if (prov === "openai") {
+      hasAuth = isOpenAILoggedIn;
+    } else if (prov === "gemini") {
+      hasAuth = geminiCliLoggedIn || !!loginApiKey;
+    } else if (prov === "perplexity") {
+      hasAuth = !!loginApiKey;
+    } else {
+      hasAuth = isClaudeLoggedIn;
+    }
+    sendBtn.disabled = !(isPluginConnected && hasAuth && !isStreaming && !isBridgeMode() && (input.value.trim() || attachedFiles.length > 0));
+  }
+
+  /* ── Thread helpers ───────────────────────────────────────────────────── */
+  function removeHome() {
+    if (homeState && homeState.parentNode) {
+      homeState.parentNode.removeChild(homeState);
+      homeState = null;
+    }
+  }
+
+  function scrollBottom() {
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function createUserMessageRow(text, fileNames) {
+    var row = document.createElement("div");
+    row.className = "msg-row";
+    var html = '<div class="user-wrap"><div class="user-bubble">';
+    if (fileNames && fileNames.length > 0) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px">';
+      fileNames.forEach(function(name) {
+        html += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.06);font-size:10px;color:var(--text-secondary)">\ud83d\udcce ' + escapeHtml(name) + '</span>';
+      });
+      html += '</div>';
+    }
+    html += escapeHtml(text) + '</div></div>';
+    row.innerHTML = html;
+    return row;
+  }
+
+  function createAssistantMessageRow(text) {
+    var row = document.createElement("div");
+    row.className = "msg-row";
+    var wrap = document.createElement("div");
+    wrap.className = "claude-wrap";
+    var body = document.createElement("div");
+    body.className = "claude-text rendered";
+    body.innerHTML = simpleMarkdown(text);
+    wrap.appendChild(body);
+    row.appendChild(wrap);
+    return row;
+  }
+
+  function createErrorRow(text) {
+    var row = document.createElement("div");
+    row.className = "msg-row";
+    row.innerHTML = '<div class="error-msg">' + escapeHtml(text) + '</div>';
+    return row;
+  }
+
+  function renderThreadForProvider(provider) {
+    var activeProvider = provider || getActiveProvider();
+    var entries = getThreadEntries(activeProvider);
+    thread.innerHTML = "";
+
+    if (activeProvider === "bridge") {
+      thread.innerHTML = bridgeHomeTemplate;
+      homeState = null;
+      return;
+    }
+
+    if (!entries.length) {
+      thread.innerHTML = homeStateTemplate;
+      homeState = document.getElementById("home-state");
+      return;
+    }
+
+    homeState = null;
+    entries.forEach(function(entry) {
+      if (entry.role === "user") {
+        thread.appendChild(createUserMessageRow(entry.text || "", entry.fileNames || []));
+      } else if (entry.role === "assistant") {
+        thread.appendChild(createAssistantMessageRow(entry.text || ""));
+      } else if (entry.role === "error") {
+        thread.appendChild(createErrorRow(entry.text || "Something went wrong."));
+      }
+      var spacer = document.createElement("div");
+      spacer.style.height = "14px";
+      thread.appendChild(spacer);
+    });
+    scrollBottom();
+  }
+
+  function buildConversationContext(provider) {
+    return getThreadEntries(provider)
+      .filter(function(entry) {
+        return entry && (entry.role === "user" || entry.role === "assistant") && entry.text;
+      })
+      .slice(-MAX_CONVERSATION_MESSAGES)
+      .map(function(entry) {
+        return {
+          role: entry.role,
+          text: entry.text,
+          fileNames: entry.fileNames || [],
+        };
+      });
+  }
+
+  function appendUserMessage(text, fileNames) {
+    removeHome();
+    var row = createUserMessageRow(text, fileNames);
+    thread.appendChild(row);
+    scrollBottom();
+    pushThreadEntry(getActiveProvider(), { role: "user", text: text, fileNames: fileNames || [] });
+  }
+
+  function beginAssistantMessage() {
+    removeHome();
+    var row = document.createElement("div");
+    row.className = "msg-row";
+    currentMsgEl = document.createElement("div");
+    currentMsgEl.className = "claude-wrap";
+
+    // Claude-style thinking indicator with rotating words
+    var th = document.createElement("div");
+    th.className = "thinking-row";
+    th.id = "thinking";
+
+    var sparkleSvg = '<svg class="thinking-sparkle" width="18" height="18" viewBox="0 0 24 24" fill="none">' +
+      '<path d="M12 2L13.09 8.26L18 4L14.74 9.91L21 10L14.74 12.09L18 18L13.09 13.74L12 20L10.91 13.74L6 18L9.26 12.09L3 10L9.26 9.91L6 4L10.91 8.26L12 2Z" fill="#da7756" opacity="0.85"/>' +
+      '</svg>';
+
+    var thinkingPhrases = [
+      "Thinking\u2026",
+      "Analyzing\u2026",
+      "Considering\u2026",
+      "Processing\u2026",
+      "Pondering\u2026",
+      "Munching\u2026",
+      "Reasoning\u2026",
+      "Contemplating\u2026",
+      "Reflecting\u2026",
+      "Working\u2026",
+      "Researching\u2026",
+      "Composing\u2026",
+      "Crafting\u2026",
+      "Evaluating\u2026",
+      "Exploring\u2026",
+      "Imagining\u2026",
+      "Synthesizing\u2026",
+      "Interpreting\u2026",
+      "Figuring out\u2026",
+      "Brainstorming\u2026"
+    ];
+
+    var wordsHtml = '<div class="thinking-words">';
+    for (var i = 0; i < thinkingPhrases.length; i++) {
+      wordsHtml += '<span class="thinking-word' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '">' + thinkingPhrases[i] + '</span>';
+    }
+    wordsHtml += '</div>';
+
+    th.innerHTML = sparkleSvg + wordsHtml;
+    currentMsgEl.appendChild(th);
+
+    // Rotate words every 2.5 seconds
+    var wordIdx = 0;
+    var totalWords = thinkingPhrases.length;
+    th._rotateInterval = setInterval(function() {
+      var words = th.querySelectorAll(".thinking-word");
+      if (!words.length || !document.contains(th)) {
+        clearInterval(th._rotateInterval);
+        return;
+      }
+      var current = words[wordIdx];
+      current.classList.remove("active");
+      current.classList.add("exit");
+      wordIdx = (wordIdx + 1) % totalWords;
+      var next = words[wordIdx];
+      // Reset next position
+      next.classList.remove("exit");
+      next.classList.add("active");
+      // Clean up exit class after transition
+      setTimeout(function() { current.classList.remove("exit"); }, 400);
+    }, 2500);
+
+    row.appendChild(currentMsgEl);
+    thread.appendChild(row);
+    scrollBottom();
+
+    currentTextEl = null;
+    currentActivityEl = null;
+    currentAssistantRawText = "";
+    currentToolStepsEl = null;
+    currentToolPills = {};
+  }
+
+  function ensureText() {
+    if (currentTextEl) return;
+    var th = document.getElementById("thinking");
+    if (th) {
+      if (th._rotateInterval) clearInterval(th._rotateInterval);
+      th.remove();
+    }
+    currentTextEl = document.createElement("div");
+    currentTextEl.className = "claude-text";
+    currentMsgEl.appendChild(currentTextEl);
+  }
+
+  function appendTextDelta(delta) {
+    ensureText();
+    currentAssistantRawText += delta;
+    var anchorEl = currentActivityEl || currentToolStepsEl;
+    if (anchorEl) {
+      currentTextEl.insertBefore(document.createTextNode(delta), anchorEl);
+    } else {
+      currentTextEl.appendChild(document.createTextNode(delta));
+    }
+    scrollBottom();
+  }
+
+  function ensureActivityStream() {
+    ensureText();
+    if (currentActivityEl) return;
+    currentActivityEl = document.createElement("div");
+    currentActivityEl.className = "activity-stream";
+    if (currentToolStepsEl) {
+      currentTextEl.insertBefore(currentActivityEl, currentToolStepsEl);
+    } else {
+      currentTextEl.appendChild(currentActivityEl);
+    }
+  }
+
+  function formatActivityTime(timestamp) {
+    try {
+      return new Date(timestamp || Date.now()).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function appendActivityLine(kind, html, timestamp) {
+    ensureActivityStream();
+    var line = document.createElement("div");
+    line.className = "activity-line " + kind;
+    line.innerHTML =
+      '<span class="activity-time">' + escapeHtml(formatActivityTime(timestamp)) + '</span>' +
+      '<span class="activity-dot"></span>' +
+      '<span class="activity-body">' + html + '</span>';
+    currentActivityEl.appendChild(line);
+    scrollBottom();
+  }
+
+  function appendAgentActivity(msg) {
+    if (!isStreaming || !currentMsgEl) return;
+    var agent = msg.agent || "Agent";
+    var status = msg.status || msg.method || "Working";
+    var method = msg.method || "";
+    var isToolLike = method && method !== "plan" && method !== "review" && method !== "done";
+    if (isToolLike) {
+      appendActivityLine(
+        "tool",
+        '<strong>' + escapeHtml(method) + '</strong> &middot; ' + escapeHtml(status),
+        msg.timestamp
+      );
+      return;
+    }
+    appendActivityLine(
+      "phase",
+      '<strong>' + escapeHtml(agent) + '</strong> &middot; ' + escapeHtml(status),
+      msg.timestamp
+    );
+  }
+
+  function ensureToolSteps() {
+    ensureText();
+    if (currentToolStepsEl) return;
+    currentToolStepsEl = document.createElement("div");
+    currentToolStepsEl.className = "tool-steps";
+    currentTextEl.appendChild(currentToolStepsEl);
+  }
+
+  function addToolStart(toolName) {
+    ensureToolSteps();
+    var label = toolLabel(toolName);
+    var pill = document.createElement("div");
+    pill.className = "tool-pill running";
+    pill.innerHTML =
+      '<div class="tool-spinner"></div>' +
+      '<span>' + escapeHtml(label) + '</span>';
+    currentToolStepsEl.appendChild(pill);
+    currentToolPills[toolName] = pill;
+    // Track unique tools used this turn
+    if (currentToolsUsed.indexOf(toolName) === -1) {
+      currentToolsUsed.push(toolName);
+    }
+    scrollBottom();
+  }
+
+  function resolveToolPill(toolName, isError) {
+    var pill = currentToolPills[toolName];
+    if (!pill) return;
+    pill.className = "tool-pill " + (isError ? "error" : "done");
+    pill.innerHTML =
+      '<span>' + (isError ? "\u2715 " : "\u2713 ") + '</span>' +
+      '<span>' + escapeHtml(toolLabel(toolName)) + '</span>';
+  }
+
+  function simpleMarkdown(text) {
+    // Escape HTML first
+    var s = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Code blocks (``` ... ```)
+    // Supports ```download:filename.md to add a download button
+    var codeBlockId = 0;
+    s = s.replace(/```(\S*)\n([\s\S]*?)```/g, function(m, lang, code) {
+      var bid = 'codeblock-' + Date.now() + '-' + (codeBlockId++);
+      var cleanCode = code.replace(/\n$/, '');
+      var downloadFile = '';
+      if (lang && lang.startsWith('download:')) {
+        downloadFile = lang.slice(9);
+        lang = '';
+      }
+      var actions = '<span class="code-block-actions">' +
+        '<button class="copy-code-btn" data-block="' + bid + '">Copy</button>' +
+        (downloadFile ? '<button class="download-code-btn" data-block="' + bid + '" data-filename="' + downloadFile + '">Download</button>' : '') +
+        '</span>';
+      return '<pre id="' + bid + '">' + actions + '<code>' + cleanCode + '</code></pre>';
+    });
+    // Inline code
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    // Headings
+    s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    s = s.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    s = s.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    // Horizontal rule
+    s = s.replace(/^---$/gm, '<hr>');
+    // Blockquote
+    s = s.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+    // Unordered lists
+    s = s.replace(/^[*\-] (.+)$/gm, '<li>$1</li>');
+    s = s.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+    // Ordered lists
+    s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    // Paragraphs: split by double newline
+    s = s.split(/\n{2,}/).map(function(block) {
+      block = block.trim();
+      if (!block) return '';
+      // Don't wrap blocks that are already block-level elements
+      if (/^<(h[1-3]|pre|ul|ol|li|blockquote|hr)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+    }).join('\n');
+    return s;
+  }
+
+  function wireCodeBlockButtons(container) {
+    // Copy buttons
+    var copyBtns = container.querySelectorAll('.copy-code-btn');
+    for (var i = 0; i < copyBtns.length; i++) {
+      copyBtns[i].addEventListener('click', function(e) {
+        var btn = e.currentTarget;
+        var blockId = btn.getAttribute('data-block');
+        var pre = document.getElementById(blockId);
+        if (!pre) return;
+        var code = pre.querySelector('code');
+        var text = code ? code.textContent : pre.textContent;
+        // Decode HTML entities back to raw text
+        var tmp = document.createElement('textarea');
+        tmp.innerHTML = text;
+        text = tmp.value;
+        // Copy to clipboard via textarea (Figma plugin sandbox)
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+    // Download buttons
+    var dlBtns = container.querySelectorAll('.download-code-btn');
+    for (var j = 0; j < dlBtns.length; j++) {
+      dlBtns[j].addEventListener('click', function(e) {
+        var btn = e.currentTarget;
+        var blockId = btn.getAttribute('data-block');
+        var filename = btn.getAttribute('data-filename') || 'download.txt';
+        var pre = document.getElementById(blockId);
+        if (!pre) return;
+        var code = pre.querySelector('code');
+        var text = code ? code.textContent : pre.textContent;
+        // Decode HTML entities
+        var tmp = document.createElement('textarea');
+        tmp.innerHTML = text;
+        text = tmp.value;
+        // Create download via data URI + anchor click
+        var blob = new Blob([text], { type: 'text/plain' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btn.textContent = 'Downloaded!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Download';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  }
+
+  function finalizeAssistantMessage() {
+    if (!currentMsgEl) return;
+    var th = document.getElementById("thinking");
+    if (th) {
+      if (th._rotateInterval) clearInterval(th._rotateInterval);
+      th.remove();
+    }
+
+    if (!currentTextEl) {
+      ensureText();
+    }
+
+    if (currentTextEl) {
+      var rawText = (currentAssistantRawText || "").trim();
+      var activityStream = currentTextEl.querySelector('.activity-stream');
+      var toolSteps = currentTextEl.querySelector('.tool-steps');
+      if (rawText) {
+        currentTextEl.innerHTML = simpleMarkdown(rawText);
+        currentTextEl.classList.add('rendered');
+        if (activityStream) currentTextEl.appendChild(activityStream);
+        if (toolSteps) currentTextEl.appendChild(toolSteps);
+        if (currentRequestProvider) {
+          pushThreadEntry(currentRequestProvider, { role: "assistant", text: rawText });
+        }
+      } else {
+        currentTextEl.innerHTML = '<p style="color:var(--text-muted)">Completed.</p>';
+        currentTextEl.classList.add('rendered');
+        if (activityStream) currentTextEl.appendChild(activityStream);
+        if (toolSteps) currentTextEl.appendChild(toolSteps);
+      }
+      // Wire up copy/download buttons on code blocks
+      wireCodeBlockButtons(currentTextEl);
+    }
+
+    // Mark any still-running pills as done
+    for (var name in currentToolPills) {
+      if (currentToolPills[name].classList.contains("running")) {
+        resolveToolPill(name, false);
+      }
+    }
+
+    // Append tools-used summary if any tools were called
+    if (currentToolsUsed.length > 0 && currentTextEl) {
+      var summaryWrap = document.createElement("div");
+      summaryWrap.style.marginTop = "10px";
+      var summaryLabel = document.createElement("div");
+      summaryLabel.className = "tools-used-label";
+      summaryLabel.textContent = currentToolsUsed.length + " MCP tool" + (currentToolsUsed.length > 1 ? "s" : "") + " used:";
+      summaryWrap.appendChild(summaryLabel);
+      var summaryRow = document.createElement("div");
+      summaryRow.className = "tools-used-summary";
+      currentToolsUsed.forEach(function(t) {
+        var tag = document.createElement("span");
+        tag.className = "tools-used-tag";
+        tag.innerHTML = '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="3" stroke="currentColor" stroke-width="1"/><path d="M2.5 4l1 1L5.5 2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>' + escapeHtml(toolLabel(t));
+        summaryRow.appendChild(tag);
+      });
+      summaryWrap.appendChild(summaryRow);
+      currentTextEl.appendChild(summaryWrap);
+    }
+
+    // Append Perplexity citations if present
+    if (pendingCitations && pendingCitations.length > 0 && currentTextEl) {
+      var citationWrap = document.createElement("div");
+      citationWrap.className = "citations-section";
+      var citationLabel = document.createElement("div");
+      citationLabel.className = "citations-label";
+      citationLabel.textContent = pendingCitations.length + " source" + (pendingCitations.length > 1 ? "s" : "");
+      citationWrap.appendChild(citationLabel);
+      pendingCitations.forEach(function(url, i) {
+        var link = document.createElement("a");
+        link.className = "citation-link";
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        try {
+          link.textContent = "[" + (i + 1) + "] " + url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0];
+        } catch(e) {
+          link.textContent = "[" + (i + 1) + "] " + url;
+        }
+        citationWrap.appendChild(link);
+      });
+      currentTextEl.appendChild(citationWrap);
+      pendingCitations = null;
+    }
+
+    // Spacer between turns
+    var sp = document.createElement("div");
+    sp.style.height = "14px";
+    if (currentMsgEl.parentNode) currentMsgEl.parentNode.appendChild(sp);
+
+    currentMsgEl = null;
+    currentTextEl = null;
+    currentActivityEl = null;
+    currentAssistantRawText = "";
+    currentToolStepsEl = null;
+    currentToolPills = {};
+    currentToolsUsed = [];
+    pendingCitations = null;
+    scrollBottom();
+  }
+
+  function showError(text) {
+    var th = document.getElementById("thinking");
+    if (th) th.remove();
+    removeHome();
+    if (currentMsgEl && currentMsgEl.parentNode) {
+      currentMsgEl.parentNode.remove();
+    }
+
+    var row = createErrorRow(text);
+    thread.appendChild(row);
+    scrollBottom();
+    if (currentRequestProvider) {
+      pushThreadEntry(currentRequestProvider, { role: "error", text: text });
+    }
+
+    currentMsgEl = null;
+    currentTextEl = null;
+    currentActivityEl = null;
+    currentAssistantRawText = "";
+    currentToolStepsEl = null;
+    currentToolPills = {};
+    currentToolsUsed = [];
+  }
+
+  /* ── Send message ─────────────────────────────────────────────────────── */
+  function sendMessage() {
+    var text = input.value.trim();
+    if ((!text && attachedFiles.length === 0) || isStreaming || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    var activeProvider = getActiveProvider();
+    var conversation = buildConversationContext(activeProvider);
+    input.value = "";
+    autoResize();
+
+    var fileNames = attachedFiles.map(function(f) { return f.name; });
+    appendUserMessage(text, fileNames);
+
+    isStreaming = true;
+    currentRequestId = uuid();
+    currentRequestProvider = activeProvider;
+    updateStatus();
+
+    // Switch to stop button
+    sendBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect x="1.5" y="1.5" width="7" height="7" rx="1.5"/></svg>';
+    sendBtn.title = "Stop";
+    sendBtn.disabled = false;
+    sendBtn.onclick = stopStreaming;
+    sendBtn.className = "stop-btn";
+
+    beginAssistantMessage();
+
+    var messageText = text;
+
+    // Intercept /knowledge command client-side — handle without AI
+    if (/^\s*\/knowledge\b/i.test(messageText)) {
+      var kQuery = messageText.replace(/^\s*\/knowledge\s*/i, "").trim();
+      // Send to relay for hub processing (not as a chat message to AI)
+      ws.send(JSON.stringify({ type: "chat", id: currentRequestId, message: messageText, mode: activeMode, model: getSelectedModel(activeProvider), conversation: [] }));
+      // Reset input color
+      input.style.color = "";
+      return;
+    }
+
+    var payload = {
+      type: "chat",
+      id: currentRequestId,
+      message: messageText,
+      model: getSelectedModel(activeProvider),
+      conversation: conversation,
+      mode: activeMode,
+    };
+
+    if (attachedFiles.length > 0) {
+      payload.attachments = attachedFiles.map(function(f) {
+        return { name: f.name, data: f.data, type: f.type, isImage: f.isImage };
+      });
+      attachedFiles = [];
+      renderAttachedFiles();
+    }
+
+    ws.send(JSON.stringify(payload));
+  }
+
+  function stopStreaming() {
+    if (!isStreaming || !currentRequestId) return;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "abort-chat", id: currentRequestId }));
+    }
+    finalizeAssistantMessage();
+    endStreaming();
+  }
+
+  function endStreaming() {
+    isStreaming = false;
+    currentRequestId = null;
+    currentRequestProvider = null;
+    resetSendBtn();
+    updateStatus();
+  }
+
+  /* ── New Conversation ─────────────────────────────────────────────────── */
+  window.startNewConversation = function() {
+    if (isStreaming) stopStreaming();
+
+    // Clear thread entries for the active provider + mode
+    var key = getThreadKey(getActiveProvider());
+    chatThreads[key] = [];
+    saveChatThreads();
+
+    // Reset DOM to home state
+    thread.innerHTML = homeStateTemplate;
+    homeState = document.getElementById("home-state");
+
+    // Tell the relay to reset the session for this mode
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "new-conversation", mode: activeMode }));
+    }
+
+    // Focus the input
+    input.value = "";
+    input.focus();
+  };
+
+  function resetSendBtn() {
+    sendBtn.className = "send-btn";
+    sendBtn.title = "Send (Enter)";
+    sendBtn.onclick = sendMessage;
+    sendBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 12V2M7 2L3 6M7 2L11 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    updateSend();
+  }
+
+  /* ── Input auto-resize ────────────────────────────────────────────────── */
+  function autoResize() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  }
+
+  input.addEventListener("input", function() {
+    autoResize();
+    updateSend();
+    // Highlight /knowledge command
+    var val = (input.value || "").trim();
+    if (/^\/knowledge\b/i.test(val)) {
+      input.style.color = "#da7756";
+    } else {
+      input.style.color = "";
+    }
+  });
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.onclick = sendMessage;
+
+  /* ── WebSocket ────────────────────────────────────────────────────────── */
+  function connect() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+
+    ws = new WebSocket("ws://localhost:9001/plugin");
+
+    ws.onopen = function() {
+      isPluginConnected = true;
+      updateStatus();
+      ws.send(JSON.stringify({ type: "plugin-hello", fileName: "Figma Intelligence" }));
+      // Tell the relay which provider is active
+      if (loginDismissed && selectedLoginProvider) {
+        sendProviderToRelay();
+      }
+      // Knowledge sources are restored from bridge-status payload (no localStorage restore needed)
+    };
+
+    ws.onclose = function() {
+      isPluginConnected = false;
+      isMcpConnected = false;
+      isClaudeLoggedIn = false;
+      isOpenAILoggedIn = false;
+      ws = null;
+      if (isStreaming) {
+        finalizeAssistantMessage();
+        endStreaming();
+      }
+      updateStatus();
+      if (reconnectTimer) return;
+      reconnectTimer = setTimeout(function() {
+        reconnectTimer = null;
+        connect();
+      }, 500);
+    };
+
+    ws.onerror = function() {
+      if (ws && ws.readyState !== WebSocket.OPEN) ws.close();
+    };
+
+    ws.onmessage = function(event) {
+      var msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+
+      // ── Bridge status ────────────────────────────────────────────────
+      if (msg.type === "bridge-status") {
+        isMcpConnected = !!msg.mcpConnected;
+        isClaudeLoggedIn = !!msg.claudeLoggedIn;
+        claudeEmail = msg.claudeEmail || null;
+        isOpenAILoggedIn = !!msg.openaiLoggedIn;
+        openaiEmail = msg.openaiEmail || null;
+        geminiCliLoggedIn = !!msg.geminiLoggedIn;
+        var geminiEmail = msg.geminiEmail || null;
+        if (msg.provider && PROVIDER_META[msg.provider]) {
+          var providerChanged = msg.provider !== selectedLoginProvider;
+          selectedLoginProvider = msg.provider;
+          if (providerChanged) {
+            updateProviderBadge();
+            renderThreadForProvider(selectedLoginProvider);
+          }
+          // If relay already knows a subscription provider or has a stored API key,
+          // skip the login screen. API-key providers (Perplexity, Stitch) also skip
+          // when the relay confirms it has their key persisted.
+          var canSkipLogin =
+            selectedLoginProvider === "claude" ||
+            selectedLoginProvider === "openai" ||
+            selectedLoginProvider === "bridge" ||
+            (selectedLoginProvider === "gemini" && geminiCliLoggedIn) ||
+            ((selectedLoginProvider === "stitch") && (msg.hasApiKey || msg.hasStitchOAuth)) ||
+            (selectedLoginProvider === "perplexity" && msg.hasApiKey);
+          if (!loginDismissed && canSkipLogin) {
+            hideLoginScreen();
+            updateProviderBadge();
+            updateModeTabsVisibility();
+            if (selectedLoginProvider === "stitch" && activeMode === "chat") switchMode("code");
+            if (selectedLoginProvider === "perplexity" && activeMode !== "chat") switchMode("chat");
+            if (selectedLoginProvider === "stitch" && input) input.placeholder = "Describe the UI screen to generate...";
+            if (selectedLoginProvider === "perplexity" && input) input.placeholder = "Research any topic...";
+          }
+        }
+        // Update Claude card description in login screen
+        var pdClaude = document.getElementById("pd-claude");
+        if (pdClaude) {
+          pdClaude.textContent = isClaudeLoggedIn
+            ? ("Logged in" + (claudeEmail ? " \u00b7 " + claudeEmail : ""))
+            : "Anthropic \u00b7 Subscription required";
+        }
+        // Update OpenAI card description in login screen
+        var pdOpenAI = document.getElementById("pd-openai");
+        if (pdOpenAI) {
+          pdOpenAI.textContent = isOpenAILoggedIn
+            ? ("Codex logged in" + (openaiEmail ? " \u00b7 " + openaiEmail : ""))
+            : "OpenAI Codex \u00b7 Uses your current codex login";
+        }
+        // Update Gemini card description in login screen
+        var pdGemini = document.getElementById("pd-gemini");
+        if (pdGemini) {
+          pdGemini.textContent = geminiCliLoggedIn
+            ? ("Gemini CLI logged in" + (geminiEmail ? " \u00b7 " + geminiEmail : "") + " \u00b7 Subscription")
+            : "Google AI \u00b7 Subscription or API key";
+        }
+        // If Gemini CLI just became authenticated, refresh the API key expand state
+        if (selectedLoginProvider === "gemini") {
+          selectLoginProvider("gemini");
+        }
+        // Restore design system state on reconnect
+        if (msg.activeDesignSystemId) {
+          var found = null;
+          for (var di = 0; di < DESIGN_SYSTEMS_UI.length; di++) {
+            if (DESIGN_SYSTEMS_UI[di].id === msg.activeDesignSystemId) { found = DESIGN_SYSTEMS_UI[di]; break; }
+          }
+          if (found && (!activeDesignSystem || activeDesignSystem.id !== found.id)) {
+            activeDesignSystem = found;
+            renderDesignSystemChip();
+            var dsBtn = document.getElementById("style-guide-btn");
+            if (dsBtn) dsBtn.classList.add("sg-btn-active");
+          }
+        } else if (activeDesignSystem && !msg.activeDesignSystemId) {
+          activeDesignSystem = null;
+          renderDesignSystemChip();
+          var dsBtn2 = document.getElementById("style-guide-btn");
+          if (dsBtn2) dsBtn2.classList.remove("sg-btn-active");
+        }
+        // Restore knowledge sources from bridge-status
+        if (msg.knowledgeSources && msg.knowledgeSources.length > 0) {
+          ksSources = msg.knowledgeSources;
+          renderKsList();
+          updateKsBadge();
+        }
+
+        // Restore reference sites from bridge-status
+        if (msg.referenceSites) {
+          renderWebRefList(msg.referenceSites);
+        }
+
+        // Track fast chat availability
+        hasFastChat = !!(msg.hasAnthropicKey);
+        updateFastChatIndicator();
+
+        updateStatus();
+        return;
+      }
+
+      // ── Knowledge source messages ────────────────────────────────────
+      if (msg.type === "content-added" || msg.type === "content-removed" ||
+          msg.type === "content-error" || msg.type === "content-list") {
+        handleKsMessage(msg);
+        return;
+      }
+
+      // ── Knowledge Hub messages ──────────────────────────────────────
+      if (msg.type === "hub-catalog" || msg.type === "hub-search-results") {
+        renderHubCatalog(msg.files || []);
+        // Auto-open the knowledge panel on hub tab
+        if (!ksPanelOpen) {
+          ksPanelOpen = true;
+          var panel = document.getElementById("ks-panel");
+          if (panel) panel.classList.add("open");
+          switchKsTab("hub");
+        }
+        return;
+      }
+      if (msg.type === "hub-auto-loaded") {
+        // Show a chat-like notification that a hub file was auto-loaded
+        showKsSuccess("\ud83d\udcda Loaded \"" + msg.title + "\" from Knowledge Hub" +
+          (msg.totalMatches > 1 ? " (" + (msg.totalMatches - 1) + " more match" + (msg.totalMatches > 2 ? "es" : "") + " available)" : ""));
+        return;
+      }
+
+      // ── Web Reference Site messages ─────────────────────────────────
+      if (msg.type === "reference-site-added") {
+        showKsSuccess("Added reference site: " + (msg.site?.name || ""));
+        if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "list-reference-sites" }));
+        return;
+      }
+      if (msg.type === "reference-site-removed") {
+        if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "list-reference-sites" }));
+        return;
+      }
+      if (msg.type === "reference-sites-list") {
+        renderWebRefList(msg.sites || []);
+        return;
+      }
+
+      // ── Stitch Google OAuth status ──────────────────────────────────
+      if (msg.type === "stitch-auth-status") {
+        var statusEl = document.getElementById("stitch-auth-status");
+        var btn = document.getElementById("stitch-google-signin-btn");
+        if (msg.status === "success") {
+          stitchGoogleAuthed = true;
+          if (statusEl) { statusEl.style.color = "#4ade80"; statusEl.textContent = "Signed in" + (msg.email ? " as " + msg.email : ""); }
+          if (btn) { btn.textContent = "Signed in with Google"; btn.style.background = "#166534"; btn.disabled = true; btn.style.opacity = "1"; }
+          updateLoginContinue();
+        } else if (msg.status === "error") {
+          if (statusEl) { statusEl.style.color = "#f87171"; statusEl.textContent = msg.error || "Sign-in failed"; }
+          if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+        } else if (msg.status === "signing-in") {
+          if (statusEl) { statusEl.style.color = "#888"; statusEl.textContent = "Waiting for Google sign-in..."; }
+        }
+        return;
+      }
+
+      // ── Provider stored confirmation ─────────────────────────────────
+      if (msg.type === "provider-stored") {
+        if (msg.provider && PROVIDER_META[msg.provider] && msg.provider !== selectedLoginProvider) {
+          selectedLoginProvider = msg.provider;
+          updateProviderBadge();
+          renderThreadForProvider(selectedLoginProvider);
+        }
+        updateStatus();
+        return; // acknowledged
+      }
+
+      // ── VS Code connection status ────────────────────────────────────
+      if (msg.type === "vscode-connected") {
+        isVscodeConnected = msg.connected;
+        updateVscodeStatus();
+        return;
+      }
+
+      // ── MCP tool request (forward to plugin sandbox) ─────────────────
+      if (msg.type === "bridge-request") {
+        parent.postMessage({
+          pluginMessage: {
+            type: "bridge-request",
+            id: msg.id,
+            method: msg.method,
+            params: msg.params || {},
+          },
+        }, "*");
+        return;
+      }
+
+      // ── Chat streaming events ────────────────────────────────────────
+      if (msg.type === "phase_start") {
+        if (isStreaming && currentMsgEl) {
+          appendActivityLine("phase",
+            '<strong>' + escapeHtml(msg.phase || "") + '</strong>',
+            Date.now()
+          );
+        }
+        return;
+      }
+
+      if (msg.type === "text_delta") {
+        appendTextDelta(msg.delta);
+        return;
+      }
+
+      if (msg.type === "tool_start") {
+        addToolStart(msg.tool);
+        return;
+      }
+
+      if (msg.type === "tool_done") {
+        resolveToolPill(msg.tool, !!msg.isError);
+        return;
+      }
+
+      if (msg.type === "citations") {
+        if (msg.urls && msg.urls.length > 0) {
+          pendingCitations = msg.urls;
+        }
+        return;
+      }
+
+      if (msg.type === "done") {
+        finalizeAssistantMessage();
+        endStreaming();
+        return;
+      }
+
+      if (msg.type === "error") {
+        showError(msg.error || "Something went wrong.");
+        endStreaming();
+        return;
+      }
+
+    };
+  }
+
+  /* ── Messages from Plugin Sandbox (code.js) ──────────────────────────── */
+  window.onmessage = function(event) {
+    var msg = event.data && event.data.pluginMessage;
+    if (!msg) return;
+
+    // Forward bridge events to relay
+    if (msg.type === "bridge-event") {
+      if (ws && ws.readyState === WebSocket.OPEN && isMcpConnected) {
+        ws.send(JSON.stringify({
+          type: "bridge-event",
+          eventType: msg.eventType,
+          payload: msg.payload,
+          timestamp: msg.timestamp || Date.now(),
+        }));
+      }
+      return;
+    }
+
+    if (msg.type === "agent-activity") {
+      appendAgentActivity(msg);
+      return;
+    }
+
+    // Forward MCP tool responses to relay
+    if (msg.type === "bridge-response") {
+      if (msg.resultBytes) {
+        var bytes = new Uint8Array(msg.resultBytes);
+        var binary = "";
+        for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        msg.result = "data:image/png;base64," + btoa(binary);
+        delete msg.resultBytes;
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ id: msg.id, result: msg.result, error: msg.error }));
+      }
+    }
+  };
+
+  /* ── Init ─────────────────────────────────────────────────────────────── */
+  initFileAttach();
+  renderProviderLogos();
+  initLoginScreen();
+  initPluginSize();
+  initPluginResizeHandles();
+  updateStatus();
+  connect();
+</script>
+</body>
+</html>

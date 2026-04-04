@@ -1,0 +1,14 @@
+{
+  "name": "Figma Intelligence Bridge",
+  "id": "figma-intelligence-bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "documentAccess": "dynamic-page",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Plugin UI connects to a local WebSocket relay server for MCP bridge communication"
+  },
+  "permissions": ["currentuser"]
+}

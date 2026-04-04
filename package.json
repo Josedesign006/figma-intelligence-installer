@@ -1,6 +1,6 @@
 {
   "name": "figma-intelligence",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "One-command installer for Figma Intelligence — AI-powered design tools for Figma",
   "bin": {
     "figma-intelligence": "bin/cli.js"
@@ -27,6 +27,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sarjal-lab/figma-intelligence-installer.git"
+    "url": "https://github.com/Josedesign006/figma-intelligence-installer.git"
   }
 }
