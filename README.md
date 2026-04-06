@@ -15,7 +15,7 @@ AI-powered design tools for Figma. 88 MCP tools that give your AI assistant (Cla
 ### Install
 
 ```bash
-npx figma-intelligence setup
+npx figma-intelligence@latest setup
 ```
 
 This installs everything and registers MCP tools with Claude, Cursor, and VS Code automatically.
@@ -23,7 +23,7 @@ This installs everything and registers MCP tools with Claude, Cursor, and VS Cod
 ### Start
 
 ```bash
-npx figma-intelligence start
+npx figma-intelligence@latest start
 ```
 
 ### Load the Figma plugin
@@ -49,10 +49,10 @@ Open your AI tool and try:
 
 | Command | Description |
 |---------|-------------|
-| `npx figma-intelligence setup` | Install and configure |
-| `npx figma-intelligence start` | Start the relay |
-| `npx figma-intelligence stop` | Stop the relay |
-| `npx figma-intelligence status` | Check connection |
+| `npx figma-intelligence@latest setup` | Install and configure |
+| `npx figma-intelligence@latest start` | Start the relay |
+| `npx figma-intelligence@latest stop` | Stop the relay |
+| `npx figma-intelligence@latest status` | Check connection |
 
 ---
 
@@ -80,7 +80,7 @@ Your design files stay in Figma. No design data is stored on the server.
 
 **Plugin shows "Bridge offline"**
 - Click the **Reconnect** button in the plugin
-- Or restart the relay: `npx figma-intelligence stop && npx figma-intelligence start`
+- Or restart the relay: `npx figma-intelligence@latest stop && npx figma-intelligence@latest start`
 
 **Plugin shows "Not logged in"**
 - Click the **Log in** button in the plugin
@@ -88,10 +88,10 @@ Your design files stay in Figma. No design data is stored on the server.
 
 **MCP tools not showing in your AI tool**
 - Restart Claude / Cursor / VS Code after running setup
-- Check: `npx figma-intelligence status`
+- Check: `npx figma-intelligence@latest status`
 
 **Relay won't start**
-- Stop existing relay: `npx figma-intelligence stop`
+- Stop existing relay: `npx figma-intelligence@latest stop`
 - Check port: `lsof -i :9001`
 
 **Updating to latest version**
