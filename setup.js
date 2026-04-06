@@ -105,7 +105,7 @@ async function runSetup() {
 }
 
 function registerMcpServer(config) {
-  const mcpUrl = `${config.cloudUrl}/mcp`;
+  const mcpUrl = `${config.cloudUrl}/mcp?token=${config.sessionToken}`;
 
   // ── Claude Desktop / Claude Code ──
   registerClaude(config, mcpUrl);
@@ -127,19 +127,64 @@ function registerClaude(config, mcpUrl) {
     }
 
     if (!claudeConfig.mcpServers) claudeConfig.mcpServers = {};
+
+    // Remove old entries that may have used invalid schema (streamable-http, headers)
+    delete claudeConfig.mcpServers["figma-intelligence"];
+    delete claudeConfig.mcpServers["figma-intelligence-layer"];
+
+    // Also clean up old entries from project-scoped configs
+    if (claudeConfig.projects) {
+      for (const [projectPath, projectConfig] of Object.entries(claudeConfig.projects)) {
+        if (projectConfig && projectConfig.mcpServers) {
+          let cleaned = false;
+          if (projectConfig.mcpServers["figma-intelligence"]) {
+            delete projectConfig.mcpServers["figma-intelligence"];
+            cleaned = true;
+          }
+          if (projectConfig.mcpServers["figma-intelligence-layer"]) {
+            delete projectConfig.mcpServers["figma-intelligence-layer"];
+            cleaned = true;
+          }
+          if (cleaned) {
+            console.log(`    Claude: cleaned old entry from project ${projectPath}`);
+          }
+        }
+      }
+    }
+
     claudeConfig.mcpServers["figma-intelligence"] = {
-      type: "streamable-http",
+      type: "http",
       url: mcpUrl,
-      headers: {
-        "X-Session-Token": config.sessionToken,
-      },
     };
 
     writeFileSync(claudeConfigPath, JSON.stringify(claudeConfig, null, 2));
-    console.log("    Claude: registered");
+    console.log("    Claude: registered (old entries cleaned up)");
   } catch (err) {
     console.log(`    Claude: skipped (${err.message})`);
   }
+
+  // Also clean up ~/.claude/settings.json (user-scope MCP servers)
+  const settingsPath = join(homedir(), ".claude", "settings.json");
+  try {
+    if (existsSync(settingsPath)) {
+      const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+      if (settings.mcpServers) {
+        let cleaned = false;
+        if (settings.mcpServers["figma-intelligence"]) {
+          delete settings.mcpServers["figma-intelligence"];
+          cleaned = true;
+        }
+        if (settings.mcpServers["figma-intelligence-layer"]) {
+          delete settings.mcpServers["figma-intelligence-layer"];
+          cleaned = true;
+        }
+        if (cleaned) {
+          writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+          console.log("    Claude: cleaned old entries from settings.json");
+        }
+      }
+    }
+  } catch {}
 }
 
 function registerCursor(config, mcpUrl) {
@@ -151,12 +196,13 @@ function registerCursor(config, mcpUrl) {
     }
 
     if (!cursorConfig.mcpServers) cursorConfig.mcpServers = {};
+
+    // Remove old entries
+    delete cursorConfig.mcpServers["figma-intelligence"];
+    delete cursorConfig.mcpServers["figma-intelligence-layer"];
+
     cursorConfig.mcpServers["figma-intelligence"] = {
-      type: "streamable-http",
       url: mcpUrl,
-      headers: {
-        "X-Session-Token": config.sessionToken,
-      },
     };
 
     mkdirSync(join(homedir(), ".cursor"), { recursive: true });
@@ -178,12 +224,14 @@ function registerVSCode(config, mcpUrl) {
     }
 
     if (!vscodeConfig.servers) vscodeConfig.servers = {};
+
+    // Remove old entries
+    delete vscodeConfig.servers["figma-intelligence"];
+    delete vscodeConfig.servers["figma-intelligence-layer"];
+
     vscodeConfig.servers["figma-intelligence"] = {
-      type: "streamable-http",
+      type: "http",
       url: mcpUrl,
-      headers: {
-        "X-Session-Token": config.sessionToken,
-      },
     };
 
     mkdirSync(vscodeConfigDir, { recursive: true });
