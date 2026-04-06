@@ -3968,27 +3968,40 @@
     isPluginConnected = false;
     authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Reconnecting…</span>';
     connect();
+    // If connect succeeds, onopen will fire. If it fails after 4s, show guidance.
+    setTimeout(function() {
+      if (!isPluginConnected) {
+        authText.innerHTML = 'Relay not running <button class="auth-btn" onclick="forceReconnect()">Retry</button>' +
+          '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">Run: npx figma-intelligence@latest start</span>';
+      }
+    }, 4000);
   }
 
   function triggerLogin(provider) {
-    if (provider === 'claude') {
-      // Send login request to relay — relay will launch claude login in terminal
+    if (provider === 'claude' || provider === 'openai') {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "trigger-login", provider: "claude" }));
-        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Opening Claude login… check your terminal</span>';
+        ws.send(JSON.stringify({ type: "trigger-login", provider: provider }));
+        var label = provider === 'claude' ? 'Claude' : 'OpenAI';
+        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Opening ' + label + ' login… check your terminal</span>' +
+          '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">After logging in, click Reconnect below</span>' +
+          '<br><button class="auth-btn" style="margin-top:6px" onclick="requestAuthRefresh()">Reconnect</button>';
       } else {
-        // Not connected — show login screen as fallback
-        showLoginScreen();
-      }
-    } else if (provider === 'openai') {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "trigger-login", provider: "openai" }));
-        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Opening OpenAI login… check your terminal</span>';
-      } else {
-        showLoginScreen();
+        // Relay offline — guide user to start it first
+        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Relay offline — start it first</span>' +
+          '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">Run: npx figma-intelligence@latest start</span>' +
+          '<br><button class="auth-btn" style="margin-top:6px" onclick="forceReconnect()">Retry connection</button>';
       }
     } else {
       showLoginScreen();
+    }
+  }
+
+  function requestAuthRefresh() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "refresh-auth" }));
+      authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Checking login status…</span>';
+    } else {
+      forceReconnect();
     }
   }
 
@@ -4001,6 +4014,8 @@
       isPluginConnected = true;
       updateStatus();
       ws.send(JSON.stringify({ type: "plugin-hello", fileName: "Figma Intelligence" }));
+      // Ask relay to re-check auth state (picks up logins done in terminal)
+      ws.send(JSON.stringify({ type: "refresh-auth" }));
       // Tell the relay which provider is active
       if (loginDismissed && selectedLoginProvider) {
         sendProviderToRelay();
