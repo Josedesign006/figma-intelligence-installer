@@ -2878,9 +2878,16 @@
   var claudeAuthed = false;
 
   function startClaudeAuth() {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
     var statusEl = document.getElementById("claude-auth-status");
     var btn = document.getElementById("claude-signin-btn");
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      // Relay not connected — show clear error
+      if (statusEl) { statusEl.style.color = "#f87171"; statusEl.textContent = "Relay not running. Run: npx figma-intelligence@latest start"; }
+      if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+      // Try to reconnect in background
+      forceReconnect();
+      return;
+    }
     if (statusEl) statusEl.textContent = "Opening Claude sign-in...";
     if (btn) { btn.disabled = true; btn.style.opacity = "0.6"; }
     ws.send(JSON.stringify({ type: "claude-auth" }));
