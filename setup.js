@@ -89,12 +89,19 @@ async function runSetup() {
     console.log("  Will use Node.js source fallback instead.");
   }
 
-  // Always copy bundled relay source as fallback
+  // Copy bundled relay and proxy to persistent location (~/.figma-intelligence/)
+  // so they survive npx cache cleanup
   const bundleSrc = join(__dirname, "bridge-relay.bundle.js");
   const bundleDest = join(CONFIG_DIR, "bridge-relay.bundle.js");
   if (existsSync(bundleSrc)) {
     copyFileSync(bundleSrc, bundleDest);
     console.log(`  Relay source installed to: ${bundleDest}`);
+  }
+
+  const proxySrc = join(__dirname, "mcp-stdio-proxy.js");
+  const proxyDest = join(CONFIG_DIR, "mcp-stdio-proxy.js");
+  if (existsSync(proxySrc)) {
+    copyFileSync(proxySrc, proxyDest);
   }
 
   // 7. Install Figma plugin files
@@ -183,9 +190,9 @@ function registerClaude(config, mcpUrl) {
       }
     }
 
-    // Use stdio proxy instead of "type": "http" for universal Claude CLI compatibility.
-    // Older Claude versions reject "type": "http" with a schema error.
-    const proxyScript = join(__dirname, "mcp-stdio-proxy.js");
+    // Use stdio proxy from persistent location (~/.figma-intelligence/)
+    // so it survives npx cache cleanup.
+    const proxyScript = join(homedir(), ".figma-intelligence", "mcp-stdio-proxy.js");
     claudeConfig.mcpServers["figma-intelligence"] = {
       command: "node",
       args: [proxyScript, config.cloudUrl, config.sessionToken],
