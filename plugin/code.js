@@ -845,6 +845,12 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
+  // Open OAuth URL in browser
+  if (msg.type === "open-external" && msg.url) {
+    figma.openExternal(msg.url);
+    return;
+  }
+
   // msg: { type: "bridge-request", id: string, method: string, params: object }
   if (msg.type !== "bridge-request") return;
 

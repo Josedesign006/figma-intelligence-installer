@@ -4024,9 +4024,7 @@
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "trigger-login", provider: provider }));
         var label = provider === 'claude' ? 'Claude' : 'OpenAI';
-        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Opening ' + label + ' login… check your terminal</span>' +
-          '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">After logging in, click Reconnect below</span>' +
-          '<br><button class="auth-btn" style="margin-top:6px" onclick="requestAuthRefresh()">Reconnect</button>';
+        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Opening ' + label + ' sign-in…</span>';
       } else {
         // Relay offline — guide user to start it first
         authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Relay offline — start it first</span>' +
@@ -4090,6 +4088,25 @@
     ws.onmessage = function(event) {
       var msg;
       try { msg = JSON.parse(event.data); } catch { return; }
+
+      // ── OAuth login URL — open in browser via Figma ─────────────────
+      if (msg.type === "login-url" && msg.url) {
+        // Ask code.js to open the OAuth URL in the user's browser
+        parent.postMessage({ pluginMessage: { type: "open-external", url: msg.url } }, "*");
+        var label = msg.provider === "openai" ? "OpenAI" : "Claude";
+        authText.innerHTML = '<span style="color:rgba(77,143,95,0.85)">Authorizing… complete sign-in in your browser</span>' +
+          '<br><button class="auth-btn green" style="margin-top:6px" onclick="requestAuthRefresh()">I\'ve signed in</button>';
+        return;
+      }
+
+      // ── Login status updates ──────────────────────────────────────────
+      if (msg.type === "login-status") {
+        if (msg.status === "starting") {
+          var label = msg.provider === "openai" ? "OpenAI" : "Claude";
+          authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Opening ' + label + ' sign-in…</span>';
+        }
+        return;
+      }
 
       // ── Bridge status ────────────────────────────────────────────────
       if (msg.type === "bridge-status") {
