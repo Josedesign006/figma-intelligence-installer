@@ -10,7 +10,7 @@
  */
 
 const { randomUUID } = require("crypto");
-const { mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync } = require("fs");
+const { mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync, copyFileSync } = require("fs");
 const { join } = require("path");
 const { homedir, platform, arch } = require("os");
 const { createInterface } = require("readline");
@@ -19,6 +19,7 @@ const { downloadBinary } = require("./download-binary");
 const CONFIG_DIR = join(homedir(), ".figma-intelligence");
 const CONFIG_PATH = join(CONFIG_DIR, "config.json");
 const BIN_DIR = join(CONFIG_DIR, "bin");
+const PLUGIN_DIR = join(CONFIG_DIR, "plugin");
 
 // ── UPDATE THIS after Railway deployment ──
 const DEFAULT_CLOUD_URL = "https://figma-intelligence-server-production.up.railway.app";
@@ -76,7 +77,7 @@ async function runSetup() {
     console.log(`  Figma token: ${config.figmaAccessToken.slice(0, 8)}… (already set)`);
   }
 
-  // 6. Download binary
+  // 6. Download binary (with source fallback)
   console.log("\n  Downloading relay binary…");
   try {
     const binaryPath = await downloadBinary(BIN_DIR);
@@ -85,26 +86,56 @@ async function runSetup() {
     console.log(`  Binary saved to: ${binaryPath}`);
   } catch (err) {
     console.log(`  Warning: Could not download binary (${err.message})`);
-    console.log("  You can run the relay from source instead with: npm start");
+    console.log("  Will use Node.js source fallback instead.");
   }
 
-  // 7. Save config
+  // Always copy bundled relay source as fallback
+  const bundleSrc = join(__dirname, "bridge-relay.bundle.js");
+  const bundleDest = join(CONFIG_DIR, "bridge-relay.bundle.js");
+  if (existsSync(bundleSrc)) {
+    copyFileSync(bundleSrc, bundleDest);
+    console.log(`  Relay source installed to: ${bundleDest}`);
+  }
+
+  // 7. Install Figma plugin files
+  console.log("\n  Installing Figma plugin…");
+  try {
+    mkdirSync(PLUGIN_DIR, { recursive: true });
+    const pluginSrc = join(__dirname, "..", "plugin");
+    const pluginFiles = ["manifest.json", "code.js", "ui.html"];
+    for (const file of pluginFiles) {
+      const src = join(pluginSrc, file);
+      if (existsSync(src)) {
+        copyFileSync(src, join(PLUGIN_DIR, file));
+      }
+    }
+    console.log(`  Plugin installed to: ${PLUGIN_DIR}`);
+  } catch (err) {
+    console.log(`  Warning: Could not install plugin (${err.message})`);
+  }
+
+  // 8. Save config
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   console.log(`\n  Config saved to: ${CONFIG_PATH}`);
 
-  // 8. Register MCP server in AI tool configs
+  // 9. Register MCP server in AI tool configs
   console.log("\n  Registering MCP server with AI tools…\n");
   registerMcpServer(config);
 
   console.log("\n  Setup complete!\n");
   console.log("  Next steps:");
-  console.log("    1. Run: figma-intelligence start");
-  console.log("    2. Open Figma Desktop");
-  console.log("    3. Load the Intelligence Bridge plugin in Figma");
-  console.log("    4. Open Claude Desktop / Cursor / VS Code — your MCP tools are ready\n");
+  console.log("    1. Run: npx figma-intelligence start");
+  console.log("    2. Open Figma Desktop and open any design file");
+  console.log("    3. In Figma: Plugins > Development > Import plugin from manifest");
+  console.log(`       Select: ${PLUGIN_DIR}/manifest.json`);
+  console.log("    4. Run the plugin — you should see 'Connected' in the plugin UI");
+  console.log("    5. Open Claude Desktop / Cursor / VS Code — your MCP tools are ready\n");
 }
 
 function registerMcpServer(config) {
+  // Embed session token directly in the URL as a query parameter.
+  // This avoids relying on custom headers which may not be sent during
+  // the MCP client's initial auth handshake, causing "SDK auth failed".
   const mcpUrl = `${config.cloudUrl}/mcp?token=${config.sessionToken}`;
 
   // ── Claude Desktop / Claude Code ──
@@ -152,9 +183,12 @@ function registerClaude(config, mcpUrl) {
       }
     }
 
+    // Use stdio proxy instead of "type": "http" for universal Claude CLI compatibility.
+    // Older Claude versions reject "type": "http" with a schema error.
+    const proxyScript = join(__dirname, "mcp-stdio-proxy.js");
     claudeConfig.mcpServers["figma-intelligence"] = {
-      type: "http",
-      url: mcpUrl,
+      command: "node",
+      args: [proxyScript, config.cloudUrl, config.sessionToken],
     };
 
     writeFileSync(claudeConfigPath, JSON.stringify(claudeConfig, null, 2));
