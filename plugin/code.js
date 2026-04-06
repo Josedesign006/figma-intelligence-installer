@@ -839,6 +839,12 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
+  // Handle relay start request from UI
+  if (msg.type === "open-relay-terminal") {
+    figma.notify("Run in terminal: npx figma-intelligence@latest start", { timeout: 8000 });
+    return;
+  }
+
   // msg: { type: "bridge-request", id: string, method: string, params: object }
   if (msg.type !== "bridge-request") return;
 

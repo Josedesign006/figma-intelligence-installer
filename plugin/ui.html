@@ -3968,13 +3968,55 @@
     isPluginConnected = false;
     authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Reconnecting…</span>';
     connect();
-    // If connect succeeds, onopen will fire. If it fails after 4s, show guidance.
+    // If connect succeeds, onopen will fire. If it fails after 4s, try starting relay.
     setTimeout(function() {
       if (!isPluginConnected) {
-        authText.innerHTML = 'Relay not running <button class="auth-btn" onclick="forceReconnect()">Retry</button>' +
-          '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">Run: npx figma-intelligence@latest start</span>';
+        authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Starting relay…</span>';
+        startRelayFromPlugin();
       }
-    }, 4000);
+    }, 3000);
+  }
+
+  function startRelayFromPlugin() {
+    // Use Figma's parent postMessage to ask code.js to run a shell command
+    // But Figma plugin sandbox can't run shell commands directly.
+    // Instead, open a Terminal window to start the relay, then retry connection.
+    try {
+      // We can't start the relay from within Figma's sandbox.
+      // Show a one-click start button that tells the user what to do,
+      // and keep retrying the connection in the background.
+      authText.innerHTML = 'Relay offline <button class="auth-btn" onclick="openRelayTerminal()">Start Relay</button>' +
+        '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">Or run: npx figma-intelligence@latest start</span>';
+    } catch(e) {}
+    // Keep retrying connection every 3s in case user starts it manually
+    if (!reconnectTimer) {
+      reconnectTimer = setTimeout(function() {
+        reconnectTimer = null;
+        connect();
+      }, 3000);
+    }
+  }
+
+  function openRelayTerminal() {
+    // Ask code.js to open a terminal (via openExternal or notify)
+    parent.postMessage({ pluginMessage: { type: "open-relay-terminal" } }, "*");
+    authText.innerHTML = '<span style="color:rgba(218,119,86,0.75)">Starting relay… waiting for connection</span>';
+    // Retry connection every 2s for 30s
+    var retryCount = 0;
+    var retryInterval = setInterval(function() {
+      retryCount++;
+      if (isPluginConnected || retryCount > 15) {
+        clearInterval(retryInterval);
+        if (!isPluginConnected) {
+          authText.innerHTML = 'Could not connect <button class="auth-btn" onclick="forceReconnect()">Retry</button>' +
+            '<br><span style="font-size:11px;opacity:0.6;margin-top:4px;display:inline-block">Run: npx figma-intelligence@latest start</span>';
+        }
+        return;
+      }
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
+        connect();
+      }
+    }, 2000);
   }
 
   function triggerLogin(provider) {
